@@ -80,6 +80,18 @@ def factura(
       <NombreRazonEmisor>Ejemplo SL</NombreRazonEmisor>
       {bloques}
       <TipoFactura>{tipo}</TipoFactura>
+      <Destinatarios>
+        <IDDestinatario><NombreRazon>Cliente SL</NombreRazon><NIF>12345678Z</NIF></IDDestinatario>
+      </Destinatarios>
+      <Desglose>
+        <DetalleDesglose>
+          <ClaveRegimen>01</ClaveRegimen>
+          <CalificacionOperacion>S1</CalificacionOperacion>
+          <TipoImpositivo>11.116</TipoImpositivo>
+          <BaseImponibleOimporteNoSujeto>111.10</BaseImponibleOimporteNoSujeto>
+          <CuotaRepercutida>12.35</CuotaRepercutida>
+        </DetalleDesglose>
+      </Desglose>
       <CuotaTotal>12.35</CuotaTotal>
       <ImporteTotal>123.45</ImporteTotal>
       <Encadenamiento><PrimerRegistro>S</PrimerRegistro></Encadenamiento>
@@ -160,12 +172,29 @@ class TestRectificativas:
         ]
         assert hallazgos and all(h.severidad is Severidad.INCOMPLETO for h in hallazgos)
 
-    def test_sustitutiva_sin_importes_es_aviso(self, tmp_path: Path) -> None:
+    def test_sustitutiva_sin_importes_es_error(self, tmp_path: Path) -> None:
+        """Error 1118 de la AEAT: en una sustitutiva el bloque es obligatorio.
+
+        Esta regla empezó siendo un aviso —parecía una conveniencia para cuadrar— y
+        el listado oficial de códigos de error demostró que es motivo de rechazo.
+        """
         informe = audita(
             lee(escribe(tmp_path, factura("R1", rectificativa="S", rectificadas=1)))
         )
-        avisos = [h for h in informe.hallazgos if h.regla == "RRSIF033"]
-        assert avisos and all(h.severidad is Severidad.AVISO for h in avisos)
+        hallazgos = [h for h in informe.hallazgos if h.regla == "RRSIF033"]
+        assert hallazgos and all(h.severidad is Severidad.ERROR for h in hallazgos)
+
+    def test_importe_rectificacion_sin_ser_sustitutiva(self, tmp_path: Path) -> None:
+        """Error 1119: fuera de las sustitutivas, el bloque no debe tener valor."""
+        informe = audita(
+            lee(
+                escribe(
+                    tmp_path,
+                    factura("R1", rectificativa="I", rectificadas=1, importe_rect=True),
+                )
+            )
+        )
+        assert "RRSIF033" in reglas_de(informe)
 
     def test_sustitutiva_con_importes_no_avisa(self, tmp_path: Path) -> None:
         informe = audita(

@@ -136,7 +136,15 @@ def rectificativa_completa(registros: list[Registro]) -> list[Hallazgo]:
 
 
 def rectificacion_solo_en_rectificativas(registros: list[Registro]) -> list[Hallazgo]:
-    """RRSIF032 — los campos de rectificación no caben en una factura normal."""
+    """RRSIF032 — los campos de rectificación no caben en una factura normal.
+
+    Corresponde a los errores **1115** (`TipoRectificativa` sin ser rectificativa) y
+    **1117** (`FacturasRectificadas` sin serlo) del listado de la AEAT.
+
+    `ImporteRectificacion` no se comprueba aquí aunque encaje: lo cubre RRSIF033, que
+    conoce además la distinción entre sustitutiva y por diferencias. Duplicarlo daría
+    dos hallazgos para un solo defecto.
+    """
     hallazgos: list[Hallazgo] = []
     for r in registros:
         if r.tipo != "alta" or r.es_rectificativa:
@@ -147,8 +155,6 @@ def rectificacion_solo_en_rectificativas(registros: list[Registro]) -> list[Hall
             sobrantes.append("TipoRectificativa")
         if r.facturas_rectificadas:
             sobrantes.append("FacturasRectificadas")
-        if r.importe_rectificacion:
-            sobrantes.append("ImporteRectificacion")
         if not sobrantes:
             continue
         hallazgos.append(
@@ -168,35 +174,54 @@ def rectificacion_solo_en_rectificativas(registros: list[Registro]) -> list[Hall
     return hallazgos
 
 
-def sustitutiva_con_importes(registros: list[Registro]) -> list[Hallazgo]:
-    """RRSIF033 — una rectificativa por sustitución declara lo que rectifica.
+def importe_rectificacion_correcto(registros: list[Registro]) -> list[Hallazgo]:
+    """RRSIF033 — `ImporteRectificacion` va exactamente en las sustitutivas.
 
-    En la modalidad `S` el importe de la rectificativa **reemplaza** al de la
-    original, así que hace falta saber cuál era la base y la cuota rectificadas para
-    poder cuadrar. En la modalidad `I` el importe ya es la diferencia y el bloque no
-    es imprescindible.
+    **Esta regla era un aviso y ahora es un error, y la corrección viene del listado
+    oficial de códigos de error de la AEAT.** El error **1118** dice que en una
+    rectificativa por sustitución el bloque `ImporteRectificacion` es *obligatorio*,
+    y el **1119** que en cualquier otro caso no debe tener valor. No es una
+    conveniencia para cuadrar a mano: es motivo de rechazo del registro.
     """
-    return [
-        Hallazgo(
-            regla="RRSIF033",
-            severidad=Severidad.AVISO,
-            titulo="Rectificativa por sustitución sin ImporteRectificacion",
-            detalle=(
-                "En una sustitutiva (S) el importe reemplaza al de la factura original. "
-                "Sin `ImporteRectificacion` —con BaseRectificada y CuotaRectificada— no "
-                "queda constancia de qué importe se está sustituyendo, y el cuadre hay "
-                "que reconstruirlo a mano."
-            ),
-            norma=NORMA_FAQ17,
-            referencia=r.referencia,
-            orden=r.orden,
+    hallazgos: list[Hallazgo] = []
+    for r in registros:
+        if r.tipo != "alta":
+            continue
+        sustitutiva = (
+            r.es_rectificativa and (r.tipo_rectificativa or "").strip().upper() == "S"
         )
-        for r in registros
-        if r.tipo == "alta"
-        and r.es_rectificativa
-        and (r.tipo_rectificativa or "").strip().upper() == "S"
-        and not r.importe_rectificacion
-    ]
+        if sustitutiva and not r.importe_rectificacion:
+            hallazgos.append(
+                Hallazgo(
+                    regla="RRSIF033",
+                    severidad=Severidad.ERROR,
+                    titulo="Rectificativa por sustitución sin ImporteRectificacion",
+                    detalle=(
+                        "En una sustitutiva (S) el importe reemplaza al de la factura "
+                        "original, y el bloque `ImporteRectificacion` es obligatorio.\n"
+                        "La AEAT rechaza el registro con el error 1118."
+                    ),
+                    norma="Códigos de error AEAT — 1118",
+                    referencia=r.referencia,
+                    orden=r.orden,
+                )
+            )
+        elif not sustitutiva and r.importe_rectificacion:
+            hallazgos.append(
+                Hallazgo(
+                    regla="RRSIF033",
+                    severidad=Severidad.ERROR,
+                    titulo="ImporteRectificacion en una factura que no es sustitutiva",
+                    detalle=(
+                        "El bloque sólo corresponde a las rectificativas por sustitución. "
+                        "La AEAT rechaza el registro con el error 1119."
+                    ),
+                    norma="Códigos de error AEAT — 1119",
+                    referencia=r.referencia,
+                    orden=r.orden,
+                )
+            )
+    return hallazgos
 
 
 def sustitucion_de_simplificadas(registros: list[Registro]) -> list[Hallazgo]:
@@ -305,7 +330,7 @@ REGLAS = (
     tipo_factura_valido,
     rectificativa_completa,
     rectificacion_solo_en_rectificativas,
-    sustitutiva_con_importes,
+    importe_rectificacion_correcto,
     sustitucion_de_simplificadas,
     subsanacion_valida,
 )
