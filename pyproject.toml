@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "verifactu-lint"
-description = "Audita registros de facturación ya emitidos contra el RRSIF (RD 1007/2023 y Orden HAC/1177/2024). No genera facturas ni las remite."
+description = "Comprueba en CI que los registros de facturación que genera tu SIF cumplen el RRSIF (RD 1007/2023 y Orden HAC/1177/2024). Solo lectura: no es un SIF."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"

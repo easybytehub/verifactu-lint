@@ -7,8 +7,9 @@
 # — y deja a la vista exactamente qué se ejecuta.
 name: verifactu-lint
 description: >-
-  Audita registros de facturación y de evento contra el RRSIF (RD 1007/2023 y Orden
-  HAC/1177/2024). Sólo lectura: no es un sistema informático de facturación.
+  Comprueba que los registros de facturación y de evento que genera tu SIF cumplen el
+  RRSIF (RD 1007/2023 y Orden HAC/1177/2024). Sólo lectura: no es un sistema
+  informático de facturación.
 author: EasyByte Hub, S. Coop. Mad.
 
 branding:
