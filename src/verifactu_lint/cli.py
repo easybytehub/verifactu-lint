@@ -66,6 +66,12 @@ def main(argv: list[str] | None = None) -> int:
     hallazgos: list[Hallazgo] = []
     analizados = 0
     ficheros_leidos: list[str] = []
+    # **Un fichero sin registros no es un fichero conforme.** Es, casi siempre, el
+    # fichero equivocado — otro XML, una exportación con envoltorio distinto, una
+    # ruta mal escrita. Decir «sin hallazgos» y salir con 0 ahí es la peor respuesta
+    # posible: indistinguible de un fichero correcto para quien mira el código de
+    # salida en su CI. Se lleva la cuenta para poder distinguirlo al final.
+    sin_registros: list[str] = []
 
     for ruta in args.ficheros:
         # Se detecta qué contiene el fichero en vez de pedírselo al usuario con un
@@ -84,6 +90,7 @@ def main(argv: list[str] | None = None) -> int:
                 "ni RegistroEvento",
                 file=sys.stderr,
             )
+            sin_registros.append(str(ruta))
             continue
 
         # Cada fichero se audita como su propia cadena, y dentro de él la de
@@ -116,6 +123,14 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     if args.estricto and informe.avisos:
         return 1
+    # Nada auditado y algún fichero ilegible como registros: eso es un error de uso,
+    # no un resultado limpio.
+    if sin_registros and not ficheros_leidos:
+        print(
+            "verifactu-lint: ningún fichero contenía registros que auditar.",
+            file=sys.stderr,
+        )
+        return 2
     return 0
 
 
