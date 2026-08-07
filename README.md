@@ -141,9 +141,19 @@ verifactu-lint registros/*.xml --formato sarif > verifactu.sarif
 | `RRSIF030` | `TipoFactura` está entre los ocho de la lista L2 |
 | `RRSIF031` | Una rectificativa declara su modalidad y qué factura rectifica |
 | `RRSIF032` | Los campos de rectificación no aparecen en facturas normales |
-| `RRSIF033` | Una sustitutiva (S) declara los importes que rectifica |
+| `RRSIF033` | `ImporteRectificacion` va exactamente en las sustitutivas |
 | `RRSIF034` | Una F3 identifica las simplificadas a las que sustituye |
 | `RRSIF035` | `Subsanacion` y `RechazoPrevio` son válidos y no se confunden con rectificar |
+| `RRSIF040` | El registro de alta lleva desglose |
+| `RRSIF041` | `CuotaTotal` = Σ cuotas + Σ recargos *(error AEAT 2006)* |
+| `RRSIF042` | `ImporteTotal` = Σ bases + Σ cuotas + Σ recargos *(errores 1210 y 2005)* |
+| `RRSIF043` | La cuota de cada línea sale de su base y su tipo *(error 1142)* |
+| `RRSIF044` | Base y cuota de una línea llevan el mismo signo *(errores 1140 y 1143)* |
+| `RRSIF045` | `Impuesto`, `ClaveRegimen`, calificación y exención existen |
+| `RRSIF046` | Lo exento, lo no sujeto y la inversión del sujeto pasivo no repercuten cuota |
+| `RRSIF047` | El recargo de equivalencia corresponde a su tipo *(errores 1160 y 1162-1170)* |
+| `RRSIF048` | `Macrodato` marca los importes de ±100.000.000 *(errores 1137-1139)* |
+| `RRSIF049` | F1, F3 y R1-R4 llevan destinatario *(error 1189)* |
 
 **Registros de evento** — es decir, la modalidad **NO VERI\*FACTU**:
 
@@ -197,6 +207,7 @@ reglamento que luego verifican.
 - **Orden HAC/1177/2024**, de 17 de octubre — especificaciones técnicas, funcionales y de contenido.
 - **AEAT — *Detalle de las especificaciones técnicas para generación de la huella o hash de los registros de facturación*, v0.1.2** (27/08/2024). Los tres vectores de su apartado 6 están en la suite de tests y se ejecutan en cada cambio: son la definición de correcto para el cálculo de la huella.
 - **AEAT — *Aclaraciones a dudas de los desarrolladores*, v1.3** (04/12/2025).
+- **AEAT — *Listado de códigos de error***. Las reglas que citan un código (1118, 1142, 1189, 2006…) comprueban exactamente lo que rechazaría el validador de la AEAT, y el hallazgo lo dice para que se pueda contrastar.
 
 Cuando una regla y la norma discrepen, la norma tiene razón y la regla es un bug. [Abre un issue](https://github.com/easybytehub/verifactu-lint/issues) citando el apartado.
 
@@ -206,7 +217,7 @@ Cubre el encadenamiento, el formato de la huella y la identificación del SIF so
 
 Cada fichero se audita detectando qué contiene. Las dos cadenas —facturación y eventos— se auditan por separado porque son independientes: un evento no encadena con una factura ni al revés.
 
-Todavía **no** cubre: la tipificación de rectificativas y subsanaciones, ni los requisitos de conservación de la modalidad NO VERI\*FACTU que no se pueden observar desde un fichero de registros. Están en los [issues](https://github.com/easybytehub/verifactu-lint/issues).
+Todavía **no** cubre: los requisitos de conservación de la modalidad NO VERI\*FACTU que no se pueden observar desde un fichero de registros, ni el seguimiento del `NumeroInstalacion` entre ejecuciones. Están en los [issues](https://github.com/easybytehub/verifactu-lint/issues).
 
 ## Contribuir
 

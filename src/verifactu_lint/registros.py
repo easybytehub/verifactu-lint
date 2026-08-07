@@ -41,6 +41,28 @@ class SistemaInformatico:
 
 
 @dataclass(frozen=True)
+class DetalleDesglose:
+    """Una línea del `Desglose`: un tipo impositivo con su base y su cuota.
+
+    Los importes se guardan como texto, sin convertir. Convertirlos al leer obligaría
+    a decidir aquí qué hacer con un valor mal formado, y esa decisión es de las
+    reglas: una es «este importe no es un número» y otra «este importe no cuadra».
+    """
+
+    orden: int
+    impuesto: str | None = None
+    clave_regimen: str | None = None
+    calificacion: str | None = None
+    operacion_exenta: str | None = None
+    tipo_impositivo: str | None = None
+    base: str | None = None
+    base_a_coste: str | None = None
+    cuota_repercutida: str | None = None
+    tipo_recargo: str | None = None
+    cuota_recargo: str | None = None
+
+
+@dataclass(frozen=True)
 class Registro:
     """Un registro de facturación, de alta o de anulación.
 
@@ -73,6 +95,9 @@ class Registro:
     importe_rectificacion: bool = False
     subsanacion: str | None = None
     rechazo_previo: str | None = None
+    macrodato: str | None = None
+    destinatarios: int = 0
+    desglose: tuple[DetalleDesglose, ...] = ()
     sistema: SistemaInformatico = field(default_factory=SistemaInformatico)
 
     @property
@@ -232,6 +257,9 @@ def _lee_alta(nodo: ET.Element, orden: int) -> Registro:
         importe_rectificacion=_buscar(nodo, "ImporteRectificacion") is not None,
         subsanacion=_valor(nodo, "Subsanacion"),
         rechazo_previo=_valor(nodo, "RechazoPrevio"),
+        macrodato=_valor(nodo, "Macrodato"),
+        destinatarios=_cuenta(nodo, "Destinatarios", "IDDestinatario"),
+        desglose=_lee_desglose(_hijo(nodo, "Desglose")),
         sistema=_lee_sistema(_hijo(nodo, "SistemaInformatico")),
     )
 
@@ -246,6 +274,36 @@ def _cuenta(padre: ET.Element, contenedor: str, elemento: str) -> int:
     if nodo is None:
         return 0
     return sum(1 for h in nodo if _local(h.tag) == elemento)
+
+
+def _lee_desglose(nodo: ET.Element | None) -> tuple[DetalleDesglose, ...]:
+    """Lee los `DetalleDesglose` conservando su orden.
+
+    El orden importa para los hallazgos: «la línea 3 no cuadra» sólo es accionable si
+    esa línea es la tercera que el usuario ve en su fichero.
+    """
+    if nodo is None:
+        return ()
+    detalles: list[DetalleDesglose] = []
+    for hijo in nodo:
+        if _local(hijo.tag) != "DetalleDesglose":
+            continue
+        detalles.append(
+            DetalleDesglose(
+                orden=len(detalles),
+                impuesto=_valor(hijo, "Impuesto"),
+                clave_regimen=_valor(hijo, "ClaveRegimen"),
+                calificacion=_valor(hijo, "CalificacionOperacion"),
+                operacion_exenta=_valor(hijo, "OperacionExenta"),
+                tipo_impositivo=_valor(hijo, "TipoImpositivo"),
+                base=_valor(hijo, "BaseImponibleOimporteNoSujeto"),
+                base_a_coste=_valor(hijo, "BaseImponibleACoste"),
+                cuota_repercutida=_valor(hijo, "CuotaRepercutida"),
+                tipo_recargo=_valor(hijo, "TipoRecargoEquivalencia"),
+                cuota_recargo=_valor(hijo, "CuotaRecargoEquivalencia"),
+            )
+        )
+    return tuple(detalles)
 
 
 def _lee_anulacion(nodo: ET.Element, orden: int) -> Registro:

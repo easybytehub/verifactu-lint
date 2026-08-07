@@ -44,6 +44,8 @@ def alta_xml(
     hora: str = "2024-01-01T19:20:30+01:00",
     cuota: str = "12.35",
     importe: str = "123.45",
+    base: str = "111.10",
+    tipo_impositivo: str = "11.116",
     tipo_huella: str = "01",
     sistema: str = SISTEMA,
 ) -> str:
@@ -67,6 +69,18 @@ def alta_xml(
         <FechaExpedicionFactura>{fecha}</FechaExpedicionFactura>
       </IDFactura>
       <TipoFactura>F1</TipoFactura>
+      <Destinatarios>
+        <IDDestinatario><NombreRazon>Cliente SL</NombreRazon><NIF>12345678Z</NIF></IDDestinatario>
+      </Destinatarios>
+      <Desglose>
+        <DetalleDesglose>
+          <ClaveRegimen>01</ClaveRegimen>
+          <CalificacionOperacion>S1</CalificacionOperacion>
+          <TipoImpositivo>{tipo_impositivo}</TipoImpositivo>
+          <BaseImponibleOimporteNoSujeto>{base}</BaseImponibleOimporteNoSujeto>
+          <CuotaRepercutida>{cuota}</CuotaRepercutida>
+        </DetalleDesglose>
+      </Desglose>
       <CuotaTotal>{cuota}</CuotaTotal>
       <ImporteTotal>{importe}</ImporteTotal>
       {encadenamiento}
