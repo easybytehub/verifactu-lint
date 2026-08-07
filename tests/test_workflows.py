@@ -34,6 +34,10 @@ def test_acciones_fijadas_a_sha(ruta: Path) -> None:
     sin_fijar: list[str] = []
 
     for referencia in USES.findall(contenido):
+        # `./` y `./ruta` apuntan a una action de este mismo repositorio, en el commit
+        # que se está ejecutando. No hay nada que fijar: ya es este código.
+        if referencia.startswith("."):
+            continue
         if "@" not in referencia:
             sin_fijar.append(referencia)
             continue

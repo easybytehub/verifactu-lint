@@ -1,0 +1,80 @@
+# La action ejecutándose de verdad, contra los ejemplos del repositorio.
+#
+# **Por qué un workflow aparte y no un test.** `tests/test_action.py` comprueba lo que
+# se puede comprobar leyendo el fichero: que el YAML es válido, que las acciones
+# anidadas están fijadas y que la versión existe. Lo que no puede comprobar es que la
+# action *funcione* — que instale, que expanda los comodines, que devuelva el código
+# de salida correcto. Eso sólo lo dice ejecutarla.
+#
+# Se ejecuta la action publicada desde el propio repositorio (`./`), así que lo que se
+# prueba es exactamente el fichero de esta rama.
+name: action
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  conforme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
+      - name: Un fichero conforme no debe hacer fallar el paso
+        uses: ./
+        with:
+          ficheros: ejemplos/cadena-conforme.xml
+          formato: json
+          salida: informe.json
+          version: local
+
+  con-hallazgos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
+
+      # `fallar: false` es el modo que se documenta para subir SARIF después: el paso
+      # no aborta, y el informe queda disponible.
+      - name: Un fichero con hallazgos, sin abortar
+        id: auditar
+        uses: ./
+        with:
+          ficheros: ejemplos/cadena-rota.xml
+          formato: json
+          salida: informe.json
+          fallar: "false"
+          version: local
+
+      - name: El recuento debe llegar como output
+        shell: bash
+        run: |
+          echo "errores=${{ steps.auditar.outputs.errores }}"
+          if [ "${{ steps.auditar.outputs.errores }}" -lt 1 ]; then
+            echo "::error::se esperaba al menos un error en cadena-rota.xml"
+            exit 1
+          fi
+
+      # Y el comportamiento contrario: con `fallar` por defecto, el paso sí falla.
+      - name: Con fallar por defecto, el paso falla
+        id: debe_fallar
+        continue-on-error: true
+        uses: ./
+        with:
+          ficheros: ejemplos/cadena-rota.xml
+          formato: texto
+          version: local
+
+      - name: Comprobar que falló
+        shell: bash
+        run: |
+          if [ "${{ steps.debe_fallar.outcome }}" != "failure" ]; then
+            echo "::error::la action debería haber fallado con hallazgos y fallar=true"
+            exit 1
+          fi

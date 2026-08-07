@@ -1,0 +1,129 @@
+# Composite action, no Docker ni JavaScript.
+#
+# **Por qué composite.** Una action en contenedor haría a quien la use descargarse una
+# imagen entera para ejecutar una herramienta sin dependencias; una en JavaScript
+# metería `node_modules` de por medio para lanzar un comando de Python. `pip install`
+# de un paquete publicado, con su versión fijada, es toda la maquinaria que hace falta
+# — y deja a la vista exactamente qué se ejecuta.
+name: verifactu-lint
+description: >-
+  Audita registros de facturación y de evento contra el RRSIF (RD 1007/2023 y Orden
+  HAC/1177/2024). Sólo lectura: no es un sistema informático de facturación.
+author: EasyByte Hub, S. Coop. Mad.
+
+branding:
+  icon: check-circle
+  color: blue
+
+inputs:
+  ficheros:
+    description: Ficheros XML a auditar. Admite comodines.
+    required: true
+  formato:
+    description: "Formato de salida: texto, json o sarif."
+    required: false
+    default: sarif
+  estricto:
+    description: Si es 'true', los avisos también hacen fallar el paso.
+    required: false
+    default: "false"
+  fallar:
+    description: >-
+      Si es 'false', el paso no falla aunque haya hallazgos. Útil cuando se sube el
+      SARIF después: un paso que aborta impide ver el informe que explica por qué.
+    required: false
+    default: "true"
+  salida:
+    description: Fichero donde escribir el informe cuando el formato no es texto.
+    required: false
+    default: verifactu-lint.sarif
+  version:
+    description: >-
+      Versión de verifactu-lint a instalar. Por defecto la fijada por esta action, no
+      la última: una action que instala 'lo último' cambia de comportamiento sin que
+      nadie haya tocado nada. El valor 'local' instala desde el propio checkout de la
+      action, que es lo que permite probarla antes de publicar la versión.
+    required: false
+    default: "0.2.0"
+  python-version:
+    description: Versión de Python para el entorno de la herramienta.
+    required: false
+    default: "3.12"
+
+outputs:
+  errores:
+    description: Número de hallazgos de severidad error.
+    value: ${{ steps.auditar.outputs.errores }}
+  avisos:
+    description: Número de hallazgos de severidad aviso.
+    value: ${{ steps.auditar.outputs.avisos }}
+  fichero-informe:
+    description: Ruta del informe generado, si el formato no es texto.
+    value: ${{ steps.auditar.outputs.fichero-informe }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    # **`local` existe por el huevo y la gallina.** Este mismo repositorio prueba la
+    # action contra sus ejemplos, y con una versión fija eso sólo podría hacerse
+    # *después* de publicarla — es decir, se publicaría sin haberla ejecutado nunca.
+    # Con `local` la action se instala desde su propio checkout y se prueba antes.
+    # Sirve igual a quien quiera probar un fork.
+    - name: Instalar verifactu-lint
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        if [ "$VERSION" = "local" ]; then
+          python -m pip install --disable-pip-version-check "$GITHUB_ACTION_PATH"
+        else
+          python -m pip install --disable-pip-version-check "verifactu-lint==$VERSION"
+        fi
+
+    - name: Auditar
+      id: auditar
+      # **`bash {0}` en vez de `bash` a secas, y es lo que hace que esto funcione.**
+      # El `shell: bash` de GitHub añade `set -e`, así que el script abortaría en el
+      # propio `verifactu-lint` en cuanto encontrase un hallazgo — antes de recoger su
+      # código de salida, de escribir el informe y de decidir si el paso debe fallar.
+      # Aquí el código de salida es un dato con el que hay que trabajar, no una razón
+      # para abortar.
+      shell: bash {0}
+      env:
+        FICHEROS: ${{ inputs.ficheros }}
+        FORMATO: ${{ inputs.formato }}
+        ESTRICTO: ${{ inputs.estricto }}
+        FALLAR: ${{ inputs.fallar }}
+        SALIDA: ${{ inputs.salida }}
+      run: |
+        opciones=(--formato "$FORMATO" --sin-color)
+        if [ "$ESTRICTO" = "true" ]; then
+          opciones+=(--estricto)
+        fi
+
+        # `$FICHEROS` va sin comillas a propósito: admite comodines y es el shell
+        # quien los expande.
+        if [ "$FORMATO" = "texto" ]; then
+          verifactu-lint $FICHEROS "${opciones[@]}"
+          codigo=$?
+        else
+          verifactu-lint $FICHEROS "${opciones[@]}" > "$SALIDA"
+          codigo=$?
+          echo "fichero-informe=$SALIDA" >> "$GITHUB_OUTPUT"
+        fi
+
+        # El recuento se lee del JSON, que es un dato, en vez de sacarlo del texto con
+        # expresiones regulares.
+        if [ "$FORMATO" = "json" ] && [ -s "$SALIDA" ]; then
+          python -c "import json,sys;r=json.load(open(sys.argv[1]))['resumen'];print(f\"errores={r['errores']}\navisos={r['avisos']}\")" "$SALIDA" >> "$GITHUB_OUTPUT"
+        fi
+
+        if [ "$codigo" -ne 0 ] && [ "$FALLAR" != "true" ]; then
+          echo "::notice::verifactu-lint encontró hallazgos; el paso no falla porque fallar=false."
+          exit 0
+        fi
+        exit "$codigo"
