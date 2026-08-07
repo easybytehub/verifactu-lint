@@ -119,6 +119,12 @@ El `continue-on-error` del paso de auditoría es deliberado: sin él, un hallazg
 | `RRSIF011` | El SIF se identifica con NIF + `IdSistemaInformatico` + `NumeroInstalacion` |
 | `RRSIF012` | `IndicadorMultiplesOT` es coherente con `TipoUsoPosibleMultiOT` |
 | `RRSIF013` | La cadena pertenece a un único obligado tributario |
+| `RRSIF030` | `TipoFactura` está entre los ocho de la lista L2 |
+| `RRSIF031` | Una rectificativa declara su modalidad y qué factura rectifica |
+| `RRSIF032` | Los campos de rectificación no aparecen en facturas normales |
+| `RRSIF033` | Una sustitutiva (S) declara los importes que rectifica |
+| `RRSIF034` | Una F3 identifica las simplificadas a las que sustituye |
+| `RRSIF035` | `Subsanacion` y `RechazoPrevio` son válidos y no se confunden con rectificar |
 
 **Registros de evento** — es decir, la modalidad **NO VERI\*FACTU**:
 

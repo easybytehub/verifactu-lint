@@ -65,7 +65,20 @@ class Registro:
     anterior_num_serie: str | None = None
     anterior_fecha_expedicion: str | None = None
     anterior_huella: str | None = None
+    # Rectificación y subsanación. Sólo aparecen en registros de alta; en las
+    # anulaciones quedan a su valor por defecto.
+    tipo_rectificativa: str | None = None
+    facturas_rectificadas: int = 0
+    facturas_sustituidas: int = 0
+    importe_rectificacion: bool = False
+    subsanacion: str | None = None
+    rechazo_previo: str | None = None
     sistema: SistemaInformatico = field(default_factory=SistemaInformatico)
+
+    @property
+    def es_rectificativa(self) -> bool:
+        """R1 a R5 son los tipos rectificativos del esquema."""
+        return (self.tipo_factura or "").strip().upper().startswith("R")
 
     @property
     def es_primer_registro(self) -> bool:
@@ -213,8 +226,26 @@ def _lee_alta(nodo: ET.Element, orden: int) -> Registro:
             _valor(anterior, "FechaExpedicionFactura") if anterior is not None else None
         ),
         anterior_huella=_valor(anterior, "Huella") if anterior is not None else None,
+        tipo_rectificativa=_valor(nodo, "TipoRectificativa"),
+        facturas_rectificadas=_cuenta(nodo, "FacturasRectificadas", "IDFacturaRectificada"),
+        facturas_sustituidas=_cuenta(nodo, "FacturasSustituidas", "IDFacturaSustituida"),
+        importe_rectificacion=_buscar(nodo, "ImporteRectificacion") is not None,
+        subsanacion=_valor(nodo, "Subsanacion"),
+        rechazo_previo=_valor(nodo, "RechazoPrevio"),
         sistema=_lee_sistema(_hijo(nodo, "SistemaInformatico")),
     )
+
+
+def _cuenta(padre: ET.Element, contenedor: str, elemento: str) -> int:
+    """Cuántos `elemento` hay dentro de `contenedor`.
+
+    Se cuenta en vez de guardar la lista porque las reglas preguntan «¿hay alguna?»
+    y «¿cuántas?», nunca por una en concreto — y el esquema admite hasta mil.
+    """
+    nodo = _hijo(padre, contenedor)
+    if nodo is None:
+        return 0
+    return sum(1 for h in nodo if _local(h.tag) == elemento)
 
 
 def _lee_anulacion(nodo: ET.Element, orden: int) -> Registro:
