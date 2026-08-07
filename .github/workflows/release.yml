@@ -95,8 +95,37 @@ jobs:
           gh release create "$GITHUB_REF_NAME" release/* \
             --title "$GITHUB_REF_NAME" --notes "$notas" $prerelease
 
+      # **Por qué este paso está condicionado.** Trusted Publishing exige registrar
+      # antes un *pending publisher* en pypi.org, y eso sólo puede hacerlo una
+      # persona con sesión allí. Hasta que exista, este paso fallaría y dejaría en
+      # rojo una release cuyo wheel y cuya procedencia son perfectamente válidos.
+      #
+      # La alternativa —`continue-on-error`— esconde el fallo: la release saldría
+      # verde sin haber publicado nada, que es peor. Una variable de repositorio hace
+      # explícito el estado: mientras no esté, el resumen dice que no se publicó y
+      # por qué.
+      #
+      # Para activarlo: en pypi.org → Publishing → Add a pending publisher, con
+      # owner `easybytehub`, repositorio `verifactu-lint`, workflow `release.yml` y
+      # environment `release`. Después, definir la variable de repositorio
+      # `PYPI_TRUSTED_PUBLISHER` con valor `listo`.
       - name: Publicar en PyPI
+        if: vars.PYPI_TRUSTED_PUBLISHER == 'listo'
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # release/v1
         with:
           packages-dir: dist
           skip-existing: true
+
+      - name: Avisar de que PyPI está pendiente
+        if: vars.PYPI_TRUSTED_PUBLISHER != 'listo'
+        run: |
+          echo "::notice::Release publicada en GitHub con procedencia verificable, pero NO en PyPI."
+          {
+            echo "### PyPI: no publicado"
+            echo
+            echo 'La variable de repositorio `PYPI_TRUSTED_PUBLISHER` no vale `listo`.'
+            echo 'Registra el pending publisher en pypi.org (owner `easybytehub`,'
+            echo 'repo `verifactu-lint`, workflow `release.yml`, environment `release`)'
+            echo 'y define la variable. El wheel de esta release es válido y'
+            echo 'se puede instalar desde la propia release.'
+          } >> "$GITHUB_STEP_SUMMARY"
