@@ -41,7 +41,8 @@ inputs:
     description: >-
       Versión de verifactu-lint a instalar. Por defecto la fijada por esta action, no
       la última: una action que instala 'lo último' cambia de comportamiento sin que
-      nadie haya tocado nada.
+      nadie haya tocado nada. El valor 'local' instala desde el propio checkout de la
+      action, que es lo que permite probarla antes de publicar la versión.
     required: false
     default: "0.2.0"
   python-version:
@@ -67,9 +68,21 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
+    # **`local` existe por el huevo y la gallina.** Este mismo repositorio prueba la
+    # action contra sus ejemplos, y con una versión fija eso sólo podría hacerse
+    # *después* de publicarla — es decir, se publicaría sin haberla ejecutado nunca.
+    # Con `local` la action se instala desde su propio checkout y se prueba antes.
+    # Sirve igual a quien quiera probar un fork.
     - name: Instalar verifactu-lint
       shell: bash
-      run: python -m pip install --disable-pip-version-check "verifactu-lint==${{ inputs.version }}"
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        if [ "$VERSION" = "local" ]; then
+          python -m pip install --disable-pip-version-check "$GITHUB_ACTION_PATH"
+        else
+          python -m pip install --disable-pip-version-check "verifactu-lint==$VERSION"
+        fi
 
     - name: Auditar
       id: auditar
