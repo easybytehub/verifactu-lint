@@ -20,10 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      # Se declara soporte para 3.11, 3.12 y 3.13, así que las tres se prueban. Una
-      # versión declarada y no ejecutada es una promesa que nadie ha comprobado.
+      # **Se prueba cada versión que `requires-python` permite.** Una versión
+      # declarada y no ejecutada es una promesa que nadie ha comprobado — y como
+      # aquí no hay techo, eso incluye 3.14: es lo que `python3` resuelve hoy en un
+      # Mac actualizado, o sea lo que le toca a quien escriba lo obvio.
       matrix:
-        python: ["3.11", "3.12", "3.13"]
+        python: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
