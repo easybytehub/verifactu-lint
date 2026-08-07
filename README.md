@@ -106,6 +106,8 @@ El `continue-on-error` del paso de auditoría es deliberado: sin él, un hallazg
 
 ## Las reglas
 
+**Registros de facturación** (alta y anulación):
+
 | Regla | Comprueba |
 |---|---|
 | `RRSIF001` | La huella declarada sale de los campos del registro |
@@ -117,6 +119,22 @@ El `continue-on-error` del paso de auditoría es deliberado: sin él, un hallazg
 | `RRSIF011` | El SIF se identifica con NIF + `IdSistemaInformatico` + `NumeroInstalacion` |
 | `RRSIF012` | `IndicadorMultiplesOT` es coherente con `TipoUsoPosibleMultiOT` |
 | `RRSIF013` | La cadena pertenece a un único obligado tributario |
+
+**Registros de evento** — es decir, la modalidad **NO VERI\*FACTU**:
+
+| Regla | Comprueba |
+|---|---|
+| `RRSIF020` | `TipoEvento` está entre los once del esquema oficial |
+| `RRSIF021` | La huella del evento sale de sus nueve campos |
+| `RRSIF022` | Formato de `HuellaEvento` |
+| `RRSIF023` | Cada evento encadena con la huella del evento anterior |
+| `RRSIF024` | `PrimerEvento` y `EventoAnterior` son excluyentes, y hay un único origen |
+| `RRSIF025` | Todo registro de evento lleva firma electrónica |
+| `RRSIF026` | `DatosPropiosEvento` corresponde al tipo de evento |
+| `RRSIF027` | Los arranques y paradas como NO VERI\*FACTU se emparejan |
+| `RRSIF028` | Existe registro resumen de eventos |
+
+> Si tu sistema opera en **NO VERI\*FACTU**, esta segunda tabla es la que te concierne. La AEAT es explícita en que esa modalidad es **técnicamente más exigente** que VERI\*FACTU: al no remitir los registros a la sede, la integridad y la trazabilidad hay que demostrarlas con el registro de eventos, su encadenamiento propio y su firma. Mucha implementación la elige creyendo que es la opción de menos trabajo.
 
 ### Tres severidades, no dos
 
@@ -139,9 +157,11 @@ Cuando una regla y la norma discrepen, la norma tiene razón y la regla es un bu
 
 ## Alcance actual
 
-Cubre el encadenamiento, el formato de la huella y la identificación del SIF, sobre registros de **alta** y **anulación**.
+Cubre el encadenamiento, el formato de la huella y la identificación del SIF sobre registros de **alta** y **anulación**, y el encadenamiento, la firma y la coherencia de los registros de **evento**.
 
-Todavía **no** cubre: registros de **evento** (el cálculo de su huella está implementado y probado, pero no las reglas que los auditan), la tipificación de rectificativas y subsanaciones, ni la conservación exigida a la modalidad NO VERI\*FACTU. Están en ese orden en los issues.
+Cada fichero se audita detectando qué contiene. Las dos cadenas —facturación y eventos— se auditan por separado porque son independientes: un evento no encadena con una factura ni al revés.
+
+Todavía **no** cubre: la tipificación de rectificativas y subsanaciones, ni los requisitos de conservación de la modalidad NO VERI\*FACTU que no se pueden observar desde un fichero de registros. Están en los [issues](https://github.com/easybytehub/verifactu-lint/issues).
 
 ## Contribuir
 

@@ -15,14 +15,17 @@ from pathlib import Path
 
 from verifactu_lint import __version__
 from verifactu_lint.hallazgos import Hallazgo, Informe
-from verifactu_lint.registros import ErrorDeLectura, lee
-from verifactu_lint.reglas import audita
+from verifactu_lint.registros import ErrorDeLectura, lee, lee_eventos
+from verifactu_lint.reglas import audita, audita_eventos
 from verifactu_lint.salida import como_json, como_sarif, texto
 
 EPILOGO = """\
-verifactu-lint audita registros de facturación YA EMITIDOS. No genera facturas, no
-las firma y no las remite a la AEAT: es una herramienta de sólo lectura y no
-constituye un sistema informático de facturación.
+verifactu-lint audita registros de facturación y de evento YA EMITIDOS. No genera
+facturas, no las firma y no las remite a la AEAT: es una herramienta de sólo lectura
+y no constituye un sistema informático de facturación.
+
+Cada fichero se audita por separado y detectando qué contiene: los registros de
+facturación y los de evento forman cadenas de huellas independientes.
 
 Un resultado sin errores no es una declaración responsable ni acredita conformidad
 con el RD 1007/2023. Esa declaración la emite el productor del SIF, bajo su
@@ -65,24 +68,35 @@ def main(argv: list[str] | None = None) -> int:
     ficheros_leidos: list[str] = []
 
     for ruta in args.ficheros:
+        # Se detecta qué contiene el fichero en vez de pedírselo al usuario con un
+        # flag: el XML ya lo dice, y un flag mal puesto auditaría eventos con las
+        # reglas de facturación y produciría un informe sin sentido.
         try:
             registros = lee(ruta)
+            eventos = lee_eventos(ruta)
         except ErrorDeLectura as exc:
             print(f"verifactu-lint: {exc}", file=sys.stderr)
             return 2
 
-        if not registros:
+        if not registros and not eventos:
             print(
-                f"verifactu-lint: {ruta}: no contiene RegistroAlta ni RegistroAnulacion",
+                f"verifactu-lint: {ruta}: no contiene RegistroAlta, RegistroAnulacion "
+                "ni RegistroEvento",
                 file=sys.stderr,
             )
             continue
 
-        # Cada fichero se audita como su propia cadena. Concatenarlos produciría
-        # roturas de encadenamiento falsas en cada frontera entre ficheros.
-        informe_fichero = audita(registros, fichero=str(ruta))
-        hallazgos.extend(informe_fichero.hallazgos)
-        analizados += informe_fichero.registros_analizados
+        # Cada fichero se audita como su propia cadena, y dentro de él la de
+        # facturación y la de eventos por separado: son independientes, y mezclarlas
+        # produciría roturas de encadenamiento inventadas.
+        for informe_parcial in (
+            audita(registros, fichero=str(ruta)) if registros else None,
+            audita_eventos(eventos, fichero=str(ruta)) if eventos else None,
+        ):
+            if informe_parcial is None:
+                continue
+            hallazgos.extend(informe_parcial.hallazgos)
+            analizados += informe_parcial.registros_analizados
         ficheros_leidos.append(str(ruta))
 
     informe = Informe(
