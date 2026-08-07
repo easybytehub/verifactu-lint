@@ -39,6 +39,9 @@ dev = [
   "mypy>=1.13",
   "pytest>=8.3",
   "ruff>=0.8",
+  # Sólo para validar action.yml en tests; el paquete no depende de YAML.
+  "PyYAML>=6.0",
+  "types-PyYAML>=6.0",
 ]
 
 [project.scripts]

@@ -93,16 +93,35 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - run: pip install verifactu-lint
-      - run: verifactu-lint registros/*.xml --formato sarif > verifactu.sarif
-        continue-on-error: true
+      - uses: easybytehub/verifactu-lint@v0.2.0
+        with:
+          ficheros: "registros/*.xml"
+          fallar: "false"      # que no aborte antes de subir el informe
       - uses: github/codeql-action/upload-sarif@v3
-        with: { sarif_file: verifactu.sarif }
+        with: { sarif_file: verifactu-lint.sarif }
 ```
 
-El `continue-on-error` del paso de auditoría es deliberado: sin él, un hallazgo abortaría el job antes de subir el SARIF y no verías *qué* falló. El fallo lo señala la pestaña Security, que es donde se puede leer.
+`fallar: false` es deliberado: sin él, un hallazgo abortaría el job **antes** de subir el SARIF y verías que falla sin poder ver por qué. El fallo lo señala la pestaña Security, que es donde se puede leer.
+
+| Entrada | Por defecto | |
+|---|---|---|
+| `ficheros` | — | Ficheros a auditar. Admite comodines. |
+| `formato` | `sarif` | `texto`, `json` o `sarif`. |
+| `estricto` | `false` | Que los avisos también hagan fallar. |
+| `fallar` | `true` | Si `false`, el paso no falla aunque haya hallazgos. |
+| `salida` | `verifactu-lint.sarif` | Fichero del informe. |
+| `version` | la de la action | Versión de `verifactu-lint` a instalar. |
+
+Salidas: `errores`, `avisos` (con `formato: json`) y `fichero-informe`.
+
+La action **fija la versión** que instala en vez de coger la última: una action que instala «lo último» cambia de comportamiento sin que nadie haya tocado nada.
+
+Si prefieres no usar la action, la CLI hace lo mismo:
+
+```bash
+pip install verifactu-lint
+verifactu-lint registros/*.xml --formato sarif > verifactu.sarif
+```
 
 ## Las reglas
 
