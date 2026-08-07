@@ -17,12 +17,16 @@ from collections.abc import Callable
 
 from verifactu_lint.hallazgos import Hallazgo, Informe
 from verifactu_lint.registros import Evento, Registro
-from verifactu_lint.reglas import encadenamiento, eventos, identificacion
+from verifactu_lint.reglas import encadenamiento, eventos, identificacion, rectificacion
 
 Regla = Callable[[list[Registro]], list[Hallazgo]]
 ReglaEvento = Callable[[list[Evento]], list[Hallazgo]]
 
-TODAS: tuple[Regla, ...] = (*encadenamiento.REGLAS, *identificacion.REGLAS)
+TODAS: tuple[Regla, ...] = (
+    *encadenamiento.REGLAS,
+    *identificacion.REGLAS,
+    *rectificacion.REGLAS,
+)
 TODAS_EVENTOS: tuple[ReglaEvento, ...] = eventos.REGLAS
 
 
