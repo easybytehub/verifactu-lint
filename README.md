@@ -1,5 +1,11 @@
 # verifactu-lint
 
+[![ci](https://github.com/easybytehub/verifactu-lint/actions/workflows/ci.yml/badge.svg)](https://github.com/easybytehub/verifactu-lint/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/easybytehub/verifactu-lint/badge)](https://scorecard.dev/viewer/?uri=github.com/easybytehub/verifactu-lint)
+[![PyPI](https://img.shields.io/pypi/v/verifactu-lint)](https://pypi.org/project/verifactu-lint/)
+[![Python](https://img.shields.io/pypi/pyversions/verifactu-lint)](https://pypi.org/project/verifactu-lint/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
 Audita registros de facturación **ya emitidos** contra el Reglamento de requisitos de los sistemas informáticos de facturación (RD 1007/2023) y su Orden de desarrollo (HAC/1177/2024).
 
 Le das el XML que tu sistema genera y te dice dónde incumple, citando el artículo.
@@ -67,6 +73,36 @@ informe = audita(lee("registros.xml"))
 for hallazgo in informe.errores:
     print(hallazgo.regla, hallazgo.titulo, hallazgo.referencia)
 ```
+
+### En tu CI
+
+Auditar en cada cambio cuesta menos que descubrir la cadena rota en una inspección. Con salida SARIF los hallazgos aparecen en la pestaña **Security** del repositorio, sin que nadie tenga que abrir un log:
+
+```yaml
+name: verifactu
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  auditar:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install verifactu-lint
+      - run: verifactu-lint registros/*.xml --formato sarif > verifactu.sarif
+        continue-on-error: true
+      - uses: github/codeql-action/upload-sarif@v3
+        with: { sarif_file: verifactu.sarif }
+```
+
+El `continue-on-error` del paso de auditoría es deliberado: sin él, un hallazgo abortaría el job antes de subir el SARIF y no verías *qué* falló. El fallo lo señala la pestaña Security, que es donde se puede leer.
 
 ## Las reglas
 

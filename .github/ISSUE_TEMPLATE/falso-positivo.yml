@@ -1,0 +1,49 @@
+name: Falso positivo
+description: verifactu-lint marca como incumplimiento algo que en realidad cumple
+labels: ["falso-positivo"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Este es el defecto más grave que puede tener esta herramienta: si marca como
+        incumplimiento algo correcto, alguien cambia código que estaba bien y deja de
+        creerse el resto del informe. Se tratan con prioridad sobre todo lo demás.
+
+        **Anonimiza el caso**: NIF y números de factura ficticios sirven igual. No
+        hace falta —ni queremos— tus registros reales.
+
+  - type: input
+    id: regla
+    attributes:
+      label: Regla
+      placeholder: RRSIF001
+    validations:
+      required: true
+
+  - type: textarea
+    id: registro
+    attributes:
+      label: Registro mínimo que lo reproduce
+      description: El XML más pequeño con el que ocurre, ya anonimizado.
+      render: xml
+    validations:
+      required: true
+
+  - type: textarea
+    id: por_que_cumple
+    attributes:
+      label: Por qué este caso sí cumple
+      description: >
+        Lo más útil aquí es la cita: artículo de la orden, apartado del FAQ de
+        desarrolladores, o la respuesta de la AEAT si la tienes. Si la norma y la
+        regla discrepan, la norma tiene razón.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Versión
+      description: "`verifactu-lint --version`"
+    validations:
+      required: true

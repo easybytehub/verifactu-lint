@@ -1,0 +1,45 @@
+name: Incumplimiento no detectado
+description: Un registro que incumple y verifactu-lint deja pasar
+labels: ["regla-nueva"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Anonimiza el caso**: NIF y números de factura ficticios sirven igual.
+
+        Si lo que falta es una familia entera de comprobaciones (eventos,
+        rectificativas, NO VERI\*FACTU), mira antes los issues abiertos: es probable
+        que ya esté registrado y prefieras comentar allí.
+
+  - type: textarea
+    id: registro
+    attributes:
+      label: Registro que debería dar hallazgo
+      render: xml
+    validations:
+      required: true
+
+  - type: textarea
+    id: que_incumple
+    attributes:
+      label: Qué incumple, y dónde lo dice la norma
+      description: >
+        Artículo del RD 1007/2023, de la Orden HAC/1177/2024, o apartado del FAQ de
+        desarrolladores. Sin la cita concreta no se puede escribir la regla, porque
+        el campo `norma` del hallazgo es lo que permite contrastarlo.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severidad
+    attributes:
+      label: Severidad que le corresponde
+      description: >
+        `error` sólo si se puede demostrar con el fichero delante. Si hace falta ver
+        el sistema o algo que no está en el XML, es `incompleto`.
+      options:
+        - error
+        - aviso
+        - incompleto
+    validations:
+      required: true
