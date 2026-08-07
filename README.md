@@ -6,14 +6,14 @@
 [![Python](https://img.shields.io/pypi/pyversions/verifactu-lint)](https://pypi.org/project/verifactu-lint/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-Audita registros de facturación **ya emitidos** contra el Reglamento de requisitos de los sistemas informáticos de facturación (RD 1007/2023) y su Orden de desarrollo (HAC/1177/2024).
+**Comprueba en tu CI que los registros de facturación que genera tu SIF cumplen el RRSIF** (RD 1007/2023 y Orden HAC/1177/2024), antes de que lleguen a un cliente o a la AEAT.
 
-Le das el XML que tu sistema genera y te dice dónde incumple, citando el artículo.
+Le pasas el XML que produce tu código y te dice dónde incumple, citando el artículo o el código de error de la AEAT.
 
 ```console
-$ verifactu-lint registros-2026-01.xml
+$ verifactu-lint registros-generados.xml
 
-verifactu-lint · 1.284 registros · registros-2026-01.xml
+verifactu-lint · 1.284 registros · registros-generados.xml
 
 ERROR      RRSIF003 [#412 FA/2026/0412]: La cadena se rompe en este registro
            Declara como huella anterior 9F2C…A31B, y la huella de #411 FA/2026/0411 es 4D77…C0E9.
@@ -21,12 +21,36 @@ ERROR      RRSIF003 [#412 FA/2026/0412]: La cadena se rompe en este registro
            falta un registro por medio, se reordenaron, o se modificó uno después de emitirlo.
            norma: Orden HAC/1177/2024, art. 13 y especificaciones técnicas de la huella
 
-1 errores · 0 avisos · 0 sin determinar
+1 error · 0 avisos · 0 sin determinar
 ```
+
+## Para quién es
+
+**Para quien desarrolla o mantiene un sistema informático de facturación.** Ése tiene los XML por construcción: son los que su código genera antes de remitirlos o conservarlos, y puede pasarlos por aquí en cada cambio.
+
+Es el caso que la herramienta cubre bien, y encaja con el calendario: la obligación de los usuarios llega en 2027, pero **la de los productores y comercializadores venció el 29 de julio de 2025**. Quien está peleándose con esto hoy es quien fabrica el software.
+
+### Dónde existe el XML, y dónde no
+
+Conviene decirlo claro antes de que te lo descargues:
+
+| Situación | ¿Tienes el fichero? |
+|---|---|
+| **Desarrollas un SIF** — tus tests o tu entorno generan registros | ✅ Sí, siempre |
+| Sistema **NO VERI\*FACTU** que exporta sus registros conservados | ⚠️ Sólo si exporta en el formato del registro |
+| Requerimiento de la AEAT, o migración entre sistemas | ⚠️ Igual: depende de cómo exporte tu sistema |
+| Usuario final de un sistema **VERI\*FACTU** | ❌ No |
+
+Las dos razones, que son de la propia AEAT:
+
+- **Un SIF VERI\*FACTU no está obligado a conservar** los registros que genera, porque ya se los ha remitido a la sede. No hay histórico que auditar.
+- **La exportación sólo es obligatoria para los NO VERI\*FACTU**, y la norma no fija su formato: pide «formato electrónico legible» y nada más. Cada fabricante exporta como quiere, así que un fichero exportado puede no ser XML de registros.
+
+Si tu sistema conserva o exporta en el formato del registro, esta herramienta te sirve igual. Si exporta en otra cosa, no — y es mejor saberlo ahora.
 
 ## Qué es, y qué no es
 
-Existen ya varias librerías buenas para **generar** registros Verifactu. Ninguna responde a la pregunta que se hace quien ya tiene un sistema en marcha: *¿lo que llevo emitido cumple?*
+Existen ya varias librerías buenas para **generar** registros Verifactu. Ninguna responde a la otra pregunta: *¿lo que estoy generando cumple?*
 
 Eso es lo que hace esta herramienta.
 
@@ -44,39 +68,11 @@ Sin dependencias en tiempo de ejecución: sólo la biblioteca estándar de Pytho
 
 ## Uso
 
-```bash
-# informe legible
-verifactu-lint registros.xml
+### En tu CI, que es donde tiene sentido
 
-# varios ficheros; cada uno se audita como su propia cadena
-verifactu-lint enero.xml febrero.xml
+Si desarrollas un SIF, haz que tus tests escriban los registros que genera tu código y pásalos por aquí en cada cambio. Un fallo en el encadenamiento o en el cuadre se ve en el pull request, no en una inspección.
 
-# para tratarlo con jq, o para archivarlo
-verifactu-lint registros.xml --formato json
-
-# para GitHub Code Scanning
-verifactu-lint registros.xml --formato sarif > verifactu.sarif
-
-# que los avisos también rompan la build
-verifactu-lint registros.xml --estricto
-```
-
-**Códigos de salida:** `0` sin errores · `1` con errores (o con avisos si `--estricto`) · `2` si el fichero no se pudo leer.
-
-Como librería:
-
-```python
-from verifactu_lint.registros import lee
-from verifactu_lint.reglas import audita
-
-informe = audita(lee("registros.xml"))
-for hallazgo in informe.errores:
-    print(hallazgo.regla, hallazgo.titulo, hallazgo.referencia)
-```
-
-### En tu CI
-
-Auditar en cada cambio cuesta menos que descubrir la cadena rota en una inspección. Con salida SARIF los hallazgos aparecen en la pestaña **Security** del repositorio, sin que nadie tenga que abrir un log:
+Con salida SARIF los hallazgos aparecen en la pestaña **Security** del repositorio, sin que nadie tenga que abrir un log:
 
 ```yaml
 name: verifactu
@@ -116,11 +112,36 @@ Salidas: `errores`, `avisos` (con `formato: json`) y `fichero-informe`.
 
 La action **fija la versión** que instala en vez de coger la última: una action que instala «lo último» cambia de comportamiento sin que nadie haya tocado nada.
 
-Si prefieres no usar la action, la CLI hace lo mismo:
+### En la línea de comandos
 
 ```bash
-pip install verifactu-lint
+# informe legible
+verifactu-lint registros.xml
+
+# varios ficheros; cada uno se audita como su propia cadena
+verifactu-lint enero.xml febrero.xml
+
+# para tratarlo con jq, o para archivarlo
+verifactu-lint registros.xml --formato json
+
+# el mismo SARIF que produce la action, sin la action
 verifactu-lint registros/*.xml --formato sarif > verifactu.sarif
+
+# que los avisos también rompan la build
+verifactu-lint registros.xml --estricto
+```
+
+**Códigos de salida:** `0` sin errores · `1` con errores (o con avisos si `--estricto`) · `2` si el fichero no se pudo leer **o si ninguno contenía registros** — apuntar al XML equivocado no es lo mismo que estar conforme.
+
+### Como librería
+
+```python
+from verifactu_lint.registros import lee
+from verifactu_lint.reglas import audita
+
+informe = audita(lee("registros.xml"))
+for hallazgo in informe.errores:
+    print(hallazgo.regla, hallazgo.titulo, hallazgo.referencia)
 ```
 
 ## Las reglas

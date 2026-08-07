@@ -20,9 +20,14 @@ from verifactu_lint.reglas import audita, audita_eventos
 from verifactu_lint.salida import como_json, como_sarif, texto
 
 EPILOGO = """\
-verifactu-lint audita registros de facturación y de evento YA EMITIDOS. No genera
-facturas, no las firma y no las remite a la AEAT: es una herramienta de sólo lectura
-y no constituye un sistema informático de facturación.
+verifactu-lint comprueba registros de facturación y de evento ya generados. No expide
+facturas, no las firma y no las remite a la AEAT: es una herramienta de sólo lectura y
+no constituye un sistema informático de facturación.
+
+Está pensada para el CI de quien desarrolla un SIF, que es quien tiene estos ficheros
+por construcción. Un SIF VERI*FACTU no conserva sus registros -ya los remitió- y la
+exportación de los NO VERI*FACTU no tiene formato obligatorio, así que un fichero
+exportado puede no ser XML de registros.
 
 Cada fichero se audita por separado y detectando qué contiene: los registros de
 facturación y los de evento forman cadenas de huellas independientes.
@@ -37,7 +42,7 @@ def _argumentos(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="verifactu-lint",
         description=(
-            "Audita registros de facturación contra el RRSIF "
+            "Comprueba registros de facturación y de evento contra el RRSIF "
             "(RD 1007/2023 y Orden HAC/1177/2024)."
         ),
         epilog=EPILOGO,
