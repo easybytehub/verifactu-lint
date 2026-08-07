@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "verifactu-lint"
+description = "Audita registros de facturación ya emitidos contra el RRSIF (RD 1007/2023 y Orden HAC/1177/2024). No genera facturas ni las remite."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "EasyByte Hub, S. Coop. Mad." }]
+keywords = ["verifactu", "aeat", "rrsif", "facturacion", "cumplimiento", "auditoria"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Natural Language :: Spanish",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business :: Financial :: Accounting",
+  "Typing :: Typed",
+]
+dynamic = ["version"]
+
+# **Cero dependencias en tiempo de ejecución, y es una decisión de diseño, no una
+# casualidad.** Esta herramienta se instala para responder a la pregunta «¿cumplo?»
+# en un sistema cuyo titular responde de su facturación. Llegar con un árbol de
+# dependencias detrás sería pedirle que amplíe su superficie de confianza justo en
+# el sitio donde vino a reducir riesgo. El XML lo parsea `xml.etree` de la
+# biblioteca estándar; el hash, `hashlib`.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.13",
+  "pytest>=8.3",
+  "ruff>=0.8",
+]
+
+[project.scripts]
+verifactu-lint = "verifactu_lint.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/easybytehub/verifactu-lint"
+Source = "https://github.com/easybytehub/verifactu-lint"
+Issues = "https://github.com/easybytehub/verifactu-lint/issues"
+
+[tool.hatch.version]
+path = "src/verifactu_lint/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/verifactu_lint"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Un aviso que nadie lee es un defecto que nadie arregla.
+filterwarnings = ["error"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E", "F", "W",   # pycodestyle y pyflakes
+  "I",             # orden de imports
+  "B",             # bugbear
+  "S",             # bandit
+  "UP",            # pyupgrade
+  "RUF",
+]
+# `assert` es el vocabulario de pytest, no un descuido de seguridad.
+per-file-ignores = { "tests/*" = ["S101"] }
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src", "tests"]

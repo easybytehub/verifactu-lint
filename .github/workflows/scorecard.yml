@@ -1,0 +1,47 @@
+# La puntuación de seguridad de la cadena de suministro, calculada por alguien que
+# no somos nosotros.
+#
+# **Por qué se publica.** Una herramienta que le pide a su usuario que compruebe la
+# procedencia de lo que instala no puede pedirle a la vez que se crea nuestra propia
+# valoración de nuestras prácticas. `publish_results` envía el resultado a la API
+# pública de la OpenSSF, donde cualquiera puede consultarlo sin pasar por aquí.
+#
+# **No sube sus hallazgos a code scanning, y es deliberado.** Los checks de Scorecard
+# son puntuaciones de política del repositorio —edad del proyecto, decisiones sobre
+# revisión de código—, no defectos del programa. Mezclarlos con los de CodeQL llena
+# la pestaña Security de entradas que nadie puede cerrar, y una pestaña que no se
+# puede vaciar es una pestaña que nadie mira. El SARIF queda como artefacto de la
+# ejecución, legible cuando alguien quiera el detalle.
+name: scorecard
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "41 5 * * 2"
+
+permissions:
+  contents: read
+
+jobs:
+  analyse:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # con lo que firma `publish_results`; no es una clave nuestra
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
+
+      - uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc  # v2.4.4
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: scorecard-results
+          path: results.sarif
+          retention-days: 30

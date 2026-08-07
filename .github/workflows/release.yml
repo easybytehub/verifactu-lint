@@ -1,0 +1,102 @@
+# Lo que produce una etiqueta: un wheel publicado y su procedencia comprobable.
+#
+# **Por qué la procedencia importa especialmente en esta herramienta.** Se instala
+# para responder a «¿cumplo?» en un sistema cuyo titular responde de su facturación.
+# Pedirle que confíe a ciegas en un paquete descargado sería ampliarle la superficie
+# de riesgo justo donde vino a reducirla. `gh attestation verify` le deja comprobar
+# qué commit, qué workflow y qué runner produjeron exactamente el artefacto que se
+# está instalando.
+#
+# **Ninguna clave nuestra interviene.** GitHub emite un token OIDC efímero para esta
+# ejecución, se firma con él y la atestación queda registrada públicamente. No hay
+# nada que custodiar, rotar ni filtrar. Lo mismo para PyPI: publicación por Trusted
+# Publishing, sin token de API almacenado en ningún secreto.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+# **Lectura arriba, escritura sólo en el job que la necesita.** Un permiso de
+# escritura declarado al principio del fichero se concede a *todos* los jobs,
+# incluido cualquiera que se añada después y sólo necesite leer.
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write      # crear la release y adjuntar el wheel con su procedencia
+      id-token: write      # OIDC: firma de la atestación y Trusted Publishing en PyPI
+      attestations: write  # registrar la atestación
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          python-version: "3.12"
+
+      # **La etiqueta y `__version__` tienen que coincidir.** Publicar un wheel que
+      # dice 0.1.0 bajo una etiqueta v0.2.0 es inutilizable para quien fije
+      # cualquiera de las dos, y el fallo aparece meses después en un informe que
+      # nadie puede reproducir. Se comprueba antes de construir nada.
+      - name: La etiqueta y `__version__` deben coincidir
+        run: |
+          etiquetada="${GITHUB_REF_NAME#v}"
+          declarada=$(python -c 'import sys; sys.path.insert(0, "src"); import verifactu_lint; print(verifactu_lint.__version__)')
+          if [ "$etiquetada" != "$declarada" ]; then
+            echo "::error::la etiqueta es v$etiquetada y __version__ es $declarada."
+            echo "Corrige el paquete o mueve la etiqueta; publicarlos separados es peor que no publicar."
+            exit 1
+          fi
+
+      - name: Construir el wheel
+        run: |
+          python -m pip install --disable-pip-version-check build==1.2.2.post1
+          python -m build
+
+      # La atestación se genera sobre el artefacto ya construido y antes de
+      # publicarlo: una procedencia que llegue después de la publicación es una que
+      # alguien pudo descargarse sin ella.
+      - name: Atestiguar la procedencia
+        id: provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2
+        with:
+          subject-path: dist/*
+
+      # **El bundle se adjunta a la release, y no es redundante.** GitHub guarda las
+      # atestaciones fuera de banda, donde una herramienta que mira los *assets* de
+      # una release no las ve. Adjuntarlo las deja comprobables también como fichero,
+      # sin necesidad de confiar en la API de este repositorio.
+      #
+      # Se copia FUERA de `dist/` a propósito: ese directorio se sube íntegro a PyPI,
+      # que rechaza cualquier fichero que no sea un artefacto instalable.
+      - name: Publicar la release con el wheel y su procedencia
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROVENANCE: ${{ steps.provenance.outputs.bundle-path }}
+        run: |
+          mkdir -p release
+          cp dist/* release/
+          cp "$PROVENANCE" release/provenance.intoto.jsonl
+          notas="Verificar la procedencia del wheel:
+
+          \`\`\`bash
+          gh attestation verify --owner ${{ github.repository_owner }} verifactu_lint-*.whl
+          \`\`\`"
+          prerelease=""
+          case "${GITHUB_REF_NAME#v}" in
+            *a*|*b*|*rc*) prerelease="--prerelease" ;;
+          esac
+          gh release create "$GITHUB_REF_NAME" release/* \
+            --title "$GITHUB_REF_NAME" --notes "$notas" $prerelease
+
+      - name: Publicar en PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # release/v1
+        with:
+          packages-dir: dist
+          skip-existing: true

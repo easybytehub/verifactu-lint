@@ -1,0 +1,41 @@
+# Análisis estático de una herramienta que no hemos escrito nosotros.
+#
+# **Qué añade sobre `ruff`, que ya ejecuta las reglas de bandit.** Un linter razona
+# línea a línea; CodeQL sigue un valor desde donde entra hasta donde se usa. Aquí eso
+# importa porque el dato de entrada es un XML ajeno: llega de un fichero que el
+# usuario no siempre ha mirado y atraviesa parser, reglas y salida. *Hasta dónde
+# llega un valor no confiable* es exactamente la pregunta que un linter no responde.
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Semanal, porque las consultas de CodeQL mejoran sin que este repositorio
+    # cambie: puede aparecer un hallazgo en código que nadie ha tocado.
+    - cron: "23 4 * * 2"
+
+permissions:
+  contents: read
+
+jobs:
+  analyse:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write  # el único write, y escribe hallazgos, no código
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
+
+      - uses: github/codeql-action/init@c4dd10e44af883a891fe31ced449bcb4a6728b9b  # v3
+        with:
+          languages: python
+          # `security-and-quality` en lugar del conjunto de seguridad a secas: este
+          # código lo leen desconocidos decidiendo si fiarse de él, así que un aviso
+          # sobre un `except` demasiado ancho compensa el ruido que añade.
+          queries: security-and-quality
+
+      - uses: github/codeql-action/analyze@c4dd10e44af883a891fe31ced449bcb4a6728b9b  # v3

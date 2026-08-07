@@ -1,0 +1,109 @@
+"""La interfaz de línea de comandos.
+
+**El código de salida es la parte que importa.** Quien mete esto en su CI necesita
+que un incumplimiento rompa la build: `1` cuando hay errores, `0` cuando no. Los
+avisos y lo indeterminado no fallan por defecto, porque una herramienta que rompe la
+build por algo que no ha podido determinar se desactiva la misma semana. `--estricto`
+está para quien quiera lo contrario, y es su decisión, no la nuestra.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+from verifactu_lint import __version__
+from verifactu_lint.hallazgos import Hallazgo, Informe
+from verifactu_lint.registros import ErrorDeLectura, lee
+from verifactu_lint.reglas import audita
+from verifactu_lint.salida import como_json, como_sarif, texto
+
+EPILOGO = """\
+verifactu-lint audita registros de facturación YA EMITIDOS. No genera facturas, no
+las firma y no las remite a la AEAT: es una herramienta de sólo lectura y no
+constituye un sistema informático de facturación.
+
+Un resultado sin errores no es una declaración responsable ni acredita conformidad
+con el RD 1007/2023. Esa declaración la emite el productor del SIF, bajo su
+responsabilidad.
+"""
+
+
+def _argumentos(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="verifactu-lint",
+        description=(
+            "Audita registros de facturación contra el RRSIF "
+            "(RD 1007/2023 y Orden HAC/1177/2024)."
+        ),
+        epilog=EPILOGO,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("ficheros", nargs="+", type=Path, help="ficheros XML de registros")
+    parser.add_argument(
+        "--formato",
+        choices=("texto", "json", "sarif"),
+        default="texto",
+        help="formato de salida (por defecto: texto)",
+    )
+    parser.add_argument(
+        "--estricto",
+        action="store_true",
+        help="salir con código 1 también si hay avisos",
+    )
+    parser.add_argument("--sin-color", action="store_true", help="desactiva el color")
+    parser.add_argument("--version", action="version", version=f"verifactu-lint {__version__}")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _argumentos(argv)
+
+    hallazgos: list[Hallazgo] = []
+    analizados = 0
+    ficheros_leidos: list[str] = []
+
+    for ruta in args.ficheros:
+        try:
+            registros = lee(ruta)
+        except ErrorDeLectura as exc:
+            print(f"verifactu-lint: {exc}", file=sys.stderr)
+            return 2
+
+        if not registros:
+            print(
+                f"verifactu-lint: {ruta}: no contiene RegistroAlta ni RegistroAnulacion",
+                file=sys.stderr,
+            )
+            continue
+
+        # Cada fichero se audita como su propia cadena. Concatenarlos produciría
+        # roturas de encadenamiento falsas en cada frontera entre ficheros.
+        informe_fichero = audita(registros, fichero=str(ruta))
+        hallazgos.extend(informe_fichero.hallazgos)
+        analizados += informe_fichero.registros_analizados
+        ficheros_leidos.append(str(ruta))
+
+    informe = Informe(
+        hallazgos=hallazgos,
+        registros_analizados=analizados,
+        fichero=", ".join(ficheros_leidos),
+    )
+
+    if args.formato == "json":
+        print(como_json(informe))
+    elif args.formato == "sarif":
+        print(como_sarif(informe, __version__))
+    else:
+        print(texto(informe, color=not args.sin_color and sys.stdout.isatty()))
+
+    if informe.errores:
+        return 1
+    if args.estricto and informe.avisos:
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
