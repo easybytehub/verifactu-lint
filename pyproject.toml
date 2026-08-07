@@ -42,6 +42,9 @@ dev = [
   # Sólo para validar action.yml en tests; el paquete no depende de YAML.
   "PyYAML>=6.0",
   "types-PyYAML>=6.0",
+  # Valida los ejemplos contra los XSD oficiales de la AEAT. Sólo en tests: el
+  # paquete sigue sin dependencias en tiempo de ejecución.
+  "lxml>=5.0",
 ]
 
 [project.scripts]

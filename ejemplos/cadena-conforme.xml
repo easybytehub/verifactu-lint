@@ -1,78 +1,144 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<sf:RegFactuSistemaFacturacion xmlns:sf="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroLR.xsd">
-  <sf:RegistroAlta>
-    <sf:IDVersion>1.0</sf:IDVersion>
-    <sf:IDFactura>
-      <sf:IDEmisorFactura>89890001K</sf:IDEmisorFactura>
-      <sf:NumSerieFactura>FA/2024/1</sf:NumSerieFactura>
-      <sf:FechaExpedicionFactura>01-01-2024</sf:FechaExpedicionFactura>
-    </sf:IDFactura>
-    <sf:TipoFactura>F1</sf:TipoFactura>
-    <sf:CuotaTotal>12.35</sf:CuotaTotal>
-    <sf:ImporteTotal>123.45</sf:ImporteTotal>
-    <Encadenamiento><PrimerRegistro>S</PrimerRegistro></Encadenamiento>
-    <sf:SistemaInformatico>
-      <sf:NombreRazon>Ejemplo SL</sf:NombreRazon>
+<sfLR:RegFactuSistemaFacturacion xmlns:sfLR="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroLR.xsd" xmlns:sf="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">
+  <sfLR:Cabecera>
+    <sf:ObligadoEmision>
+      <sf:NombreRazon>Empresa de Ejemplo SL</sf:NombreRazon>
       <sf:NIF>89890001K</sf:NIF>
-      <sf:IdSistemaInformatico>A1</sf:IdSistemaInformatico>
-      <sf:Version>1.0</sf:Version>
-      <sf:NumeroInstalacion>0001</sf:NumeroInstalacion>
-      <sf:TipoUsoPosibleSoloVerifactu>S</sf:TipoUsoPosibleSoloVerifactu>
-      <sf:TipoUsoPosibleMultiOT>N</sf:TipoUsoPosibleMultiOT>
-      <sf:IndicadorMultiplesOT>N</sf:IndicadorMultiplesOT>
-    </sf:SistemaInformatico>
-    <sf:FechaHoraHusoGenRegistro>2024-01-01T19:20:30+01:00</sf:FechaHoraHusoGenRegistro>
-    <sf:TipoHuella>01</sf:TipoHuella>
-    <sf:Huella>CBECA93A988DF2767BA0551686B7EA26255C4C12643ABE033A992B778F07AD45</sf:Huella>
-  </sf:RegistroAlta>
-  <sf:RegistroAlta>
-    <sf:IDVersion>1.0</sf:IDVersion>
-    <sf:IDFactura>
-      <sf:IDEmisorFactura>89890001K</sf:IDEmisorFactura>
-      <sf:NumSerieFactura>FA/2024/2</sf:NumSerieFactura>
-      <sf:FechaExpedicionFactura>01-01-2024</sf:FechaExpedicionFactura>
-    </sf:IDFactura>
-    <sf:TipoFactura>F1</sf:TipoFactura>
-    <sf:CuotaTotal>12.35</sf:CuotaTotal>
-    <sf:ImporteTotal>123.45</sf:ImporteTotal>
-    <Encadenamiento><RegistroAnterior><IDEmisorFactura>89890001K</IDEmisorFactura><NumSerieFactura>previa</NumSerieFactura><FechaExpedicionFactura>01-01-2024</FechaExpedicionFactura><Huella>CBECA93A988DF2767BA0551686B7EA26255C4C12643ABE033A992B778F07AD45</Huella></RegistroAnterior></Encadenamiento>
-    <sf:SistemaInformatico>
-      <sf:NombreRazon>Ejemplo SL</sf:NombreRazon>
-      <sf:NIF>89890001K</sf:NIF>
-      <sf:IdSistemaInformatico>A1</sf:IdSistemaInformatico>
-      <sf:Version>1.0</sf:Version>
-      <sf:NumeroInstalacion>0001</sf:NumeroInstalacion>
-      <sf:TipoUsoPosibleSoloVerifactu>S</sf:TipoUsoPosibleSoloVerifactu>
-      <sf:TipoUsoPosibleMultiOT>N</sf:TipoUsoPosibleMultiOT>
-      <sf:IndicadorMultiplesOT>N</sf:IndicadorMultiplesOT>
-    </sf:SistemaInformatico>
-    <sf:FechaHoraHusoGenRegistro>2024-01-01T19:20:31+01:00</sf:FechaHoraHusoGenRegistro>
-    <sf:TipoHuella>01</sf:TipoHuella>
-    <sf:Huella>21DA842FEF657D5FB05642607F4DC1953D26EA2E02E307FFAA460F071A2E254F</sf:Huella>
-  </sf:RegistroAlta>
-  <sf:RegistroAlta>
-    <sf:IDVersion>1.0</sf:IDVersion>
-    <sf:IDFactura>
-      <sf:IDEmisorFactura>89890001K</sf:IDEmisorFactura>
-      <sf:NumSerieFactura>FA/2024/3</sf:NumSerieFactura>
-      <sf:FechaExpedicionFactura>01-01-2024</sf:FechaExpedicionFactura>
-    </sf:IDFactura>
-    <sf:TipoFactura>F1</sf:TipoFactura>
-    <sf:CuotaTotal>12.35</sf:CuotaTotal>
-    <sf:ImporteTotal>123.45</sf:ImporteTotal>
-    <Encadenamiento><RegistroAnterior><IDEmisorFactura>89890001K</IDEmisorFactura><NumSerieFactura>previa</NumSerieFactura><FechaExpedicionFactura>01-01-2024</FechaExpedicionFactura><Huella>21DA842FEF657D5FB05642607F4DC1953D26EA2E02E307FFAA460F071A2E254F</Huella></RegistroAnterior></Encadenamiento>
-    <sf:SistemaInformatico>
-      <sf:NombreRazon>Ejemplo SL</sf:NombreRazon>
-      <sf:NIF>89890001K</sf:NIF>
-      <sf:IdSistemaInformatico>A1</sf:IdSistemaInformatico>
-      <sf:Version>1.0</sf:Version>
-      <sf:NumeroInstalacion>0001</sf:NumeroInstalacion>
-      <sf:TipoUsoPosibleSoloVerifactu>S</sf:TipoUsoPosibleSoloVerifactu>
-      <sf:TipoUsoPosibleMultiOT>N</sf:TipoUsoPosibleMultiOT>
-      <sf:IndicadorMultiplesOT>N</sf:IndicadorMultiplesOT>
-    </sf:SistemaInformatico>
-    <sf:FechaHoraHusoGenRegistro>2024-01-01T19:20:32+01:00</sf:FechaHoraHusoGenRegistro>
-    <sf:TipoHuella>01</sf:TipoHuella>
-    <sf:Huella>D2EA4F64817D71D126F99B4234429EE4841669F77478C2317987965A2E4DBBC5</sf:Huella>
-  </sf:RegistroAlta>
-</sf:RegFactuSistemaFacturacion>
+    </sf:ObligadoEmision>
+  </sfLR:Cabecera>
+  <sfLR:RegistroFactura>
+    <sf:RegistroAlta>
+      <sf:IDVersion>1.0</sf:IDVersion>
+      <sf:IDFactura>
+        <sf:IDEmisorFactura>89890001K</sf:IDEmisorFactura>
+        <sf:NumSerieFactura>FA/2024/1</sf:NumSerieFactura>
+        <sf:FechaExpedicionFactura>01-01-2024</sf:FechaExpedicionFactura>
+      </sf:IDFactura>
+      <sf:NombreRazonEmisor>Empresa de Ejemplo SL</sf:NombreRazonEmisor>
+      <sf:TipoFactura>F1</sf:TipoFactura>
+      <sf:DescripcionOperacion>Prestacion de servicios</sf:DescripcionOperacion>
+      <sf:Destinatarios>
+        <sf:IDDestinatario>
+          <sf:NombreRazon>Cliente de Ejemplo SL</sf:NombreRazon>
+          <sf:NIF>12345678Z</sf:NIF>
+        </sf:IDDestinatario>
+      </sf:Destinatarios>
+      <sf:Desglose>
+        <sf:DetalleDesglose>
+          <sf:ClaveRegimen>01</sf:ClaveRegimen>
+          <sf:CalificacionOperacion>S1</sf:CalificacionOperacion>
+          <sf:TipoImpositivo>21</sf:TipoImpositivo>
+          <sf:BaseImponibleOimporteNoSujeto>100.00</sf:BaseImponibleOimporteNoSujeto>
+          <sf:CuotaRepercutida>21.00</sf:CuotaRepercutida>
+        </sf:DetalleDesglose>
+      </sf:Desglose>
+      <sf:CuotaTotal>21.00</sf:CuotaTotal>
+      <sf:ImporteTotal>121.00</sf:ImporteTotal>
+      <sf:Encadenamiento><sf:PrimerRegistro>S</sf:PrimerRegistro></sf:Encadenamiento>
+      <sf:SistemaInformatico>
+        <sf:NombreRazon>EasyByte Hub S. Coop. Mad.</sf:NombreRazon>
+        <sf:NIF>89890001K</sf:NIF>
+        <sf:NombreSistemaInformatico>Sistema de Ejemplo</sf:NombreSistemaInformatico>
+        <sf:IdSistemaInformatico>A1</sf:IdSistemaInformatico>
+        <sf:Version>1.0</sf:Version>
+        <sf:NumeroInstalacion>0001</sf:NumeroInstalacion>
+        <sf:TipoUsoPosibleSoloVerifactu>S</sf:TipoUsoPosibleSoloVerifactu>
+        <sf:TipoUsoPosibleMultiOT>N</sf:TipoUsoPosibleMultiOT>
+        <sf:IndicadorMultiplesOT>N</sf:IndicadorMultiplesOT>
+      </sf:SistemaInformatico>
+      <sf:FechaHoraHusoGenRegistro>2024-01-01T19:20:30+01:00</sf:FechaHoraHusoGenRegistro>
+      <sf:TipoHuella>01</sf:TipoHuella>
+      <sf:Huella>3DDAD5BAC254543C5301B1571E3C546F92196486BED7FD346C5FBBF0FE8677F7</sf:Huella>
+    </sf:RegistroAlta>
+  </sfLR:RegistroFactura>
+  <sfLR:RegistroFactura>
+    <sf:RegistroAlta>
+      <sf:IDVersion>1.0</sf:IDVersion>
+      <sf:IDFactura>
+        <sf:IDEmisorFactura>89890001K</sf:IDEmisorFactura>
+        <sf:NumSerieFactura>FA/2024/2</sf:NumSerieFactura>
+        <sf:FechaExpedicionFactura>01-01-2024</sf:FechaExpedicionFactura>
+      </sf:IDFactura>
+      <sf:NombreRazonEmisor>Empresa de Ejemplo SL</sf:NombreRazonEmisor>
+      <sf:TipoFactura>F1</sf:TipoFactura>
+      <sf:DescripcionOperacion>Prestacion de servicios</sf:DescripcionOperacion>
+      <sf:Destinatarios>
+        <sf:IDDestinatario>
+          <sf:NombreRazon>Cliente de Ejemplo SL</sf:NombreRazon>
+          <sf:NIF>12345678Z</sf:NIF>
+        </sf:IDDestinatario>
+      </sf:Destinatarios>
+      <sf:Desglose>
+        <sf:DetalleDesglose>
+          <sf:ClaveRegimen>01</sf:ClaveRegimen>
+          <sf:CalificacionOperacion>S1</sf:CalificacionOperacion>
+          <sf:TipoImpositivo>21</sf:TipoImpositivo>
+          <sf:BaseImponibleOimporteNoSujeto>100.00</sf:BaseImponibleOimporteNoSujeto>
+          <sf:CuotaRepercutida>21.00</sf:CuotaRepercutida>
+        </sf:DetalleDesglose>
+      </sf:Desglose>
+      <sf:CuotaTotal>21.00</sf:CuotaTotal>
+      <sf:ImporteTotal>121.00</sf:ImporteTotal>
+      <sf:Encadenamiento><sf:RegistroAnterior><sf:IDEmisorFactura>89890001K</sf:IDEmisorFactura><sf:NumSerieFactura>previa</sf:NumSerieFactura><sf:FechaExpedicionFactura>01-01-2024</sf:FechaExpedicionFactura><sf:Huella>3DDAD5BAC254543C5301B1571E3C546F92196486BED7FD346C5FBBF0FE8677F7</sf:Huella></sf:RegistroAnterior></sf:Encadenamiento>
+      <sf:SistemaInformatico>
+        <sf:NombreRazon>EasyByte Hub S. Coop. Mad.</sf:NombreRazon>
+        <sf:NIF>89890001K</sf:NIF>
+        <sf:NombreSistemaInformatico>Sistema de Ejemplo</sf:NombreSistemaInformatico>
+        <sf:IdSistemaInformatico>A1</sf:IdSistemaInformatico>
+        <sf:Version>1.0</sf:Version>
+        <sf:NumeroInstalacion>0001</sf:NumeroInstalacion>
+        <sf:TipoUsoPosibleSoloVerifactu>S</sf:TipoUsoPosibleSoloVerifactu>
+        <sf:TipoUsoPosibleMultiOT>N</sf:TipoUsoPosibleMultiOT>
+        <sf:IndicadorMultiplesOT>N</sf:IndicadorMultiplesOT>
+      </sf:SistemaInformatico>
+      <sf:FechaHoraHusoGenRegistro>2024-01-01T19:20:31+01:00</sf:FechaHoraHusoGenRegistro>
+      <sf:TipoHuella>01</sf:TipoHuella>
+      <sf:Huella>093FF42B8E3F9EF97349B5DBD8E47CC481A9097471170BB59A4C69CCD4DB92B6</sf:Huella>
+    </sf:RegistroAlta>
+  </sfLR:RegistroFactura>
+  <sfLR:RegistroFactura>
+    <sf:RegistroAlta>
+      <sf:IDVersion>1.0</sf:IDVersion>
+      <sf:IDFactura>
+        <sf:IDEmisorFactura>89890001K</sf:IDEmisorFactura>
+        <sf:NumSerieFactura>FA/2024/3</sf:NumSerieFactura>
+        <sf:FechaExpedicionFactura>01-01-2024</sf:FechaExpedicionFactura>
+      </sf:IDFactura>
+      <sf:NombreRazonEmisor>Empresa de Ejemplo SL</sf:NombreRazonEmisor>
+      <sf:TipoFactura>F1</sf:TipoFactura>
+      <sf:DescripcionOperacion>Prestacion de servicios</sf:DescripcionOperacion>
+      <sf:Destinatarios>
+        <sf:IDDestinatario>
+          <sf:NombreRazon>Cliente de Ejemplo SL</sf:NombreRazon>
+          <sf:NIF>12345678Z</sf:NIF>
+        </sf:IDDestinatario>
+      </sf:Destinatarios>
+      <sf:Desglose>
+        <sf:DetalleDesglose>
+          <sf:ClaveRegimen>01</sf:ClaveRegimen>
+          <sf:CalificacionOperacion>S1</sf:CalificacionOperacion>
+          <sf:TipoImpositivo>21</sf:TipoImpositivo>
+          <sf:BaseImponibleOimporteNoSujeto>100.00</sf:BaseImponibleOimporteNoSujeto>
+          <sf:CuotaRepercutida>21.00</sf:CuotaRepercutida>
+        </sf:DetalleDesglose>
+      </sf:Desglose>
+      <sf:CuotaTotal>21.00</sf:CuotaTotal>
+      <sf:ImporteTotal>121.00</sf:ImporteTotal>
+      <sf:Encadenamiento><sf:RegistroAnterior><sf:IDEmisorFactura>89890001K</sf:IDEmisorFactura><sf:NumSerieFactura>previa</sf:NumSerieFactura><sf:FechaExpedicionFactura>01-01-2024</sf:FechaExpedicionFactura><sf:Huella>093FF42B8E3F9EF97349B5DBD8E47CC481A9097471170BB59A4C69CCD4DB92B6</sf:Huella></sf:RegistroAnterior></sf:Encadenamiento>
+      <sf:SistemaInformatico>
+        <sf:NombreRazon>EasyByte Hub S. Coop. Mad.</sf:NombreRazon>
+        <sf:NIF>89890001K</sf:NIF>
+        <sf:NombreSistemaInformatico>Sistema de Ejemplo</sf:NombreSistemaInformatico>
+        <sf:IdSistemaInformatico>A1</sf:IdSistemaInformatico>
+        <sf:Version>1.0</sf:Version>
+        <sf:NumeroInstalacion>0001</sf:NumeroInstalacion>
+        <sf:TipoUsoPosibleSoloVerifactu>S</sf:TipoUsoPosibleSoloVerifactu>
+        <sf:TipoUsoPosibleMultiOT>N</sf:TipoUsoPosibleMultiOT>
+        <sf:IndicadorMultiplesOT>N</sf:IndicadorMultiplesOT>
+      </sf:SistemaInformatico>
+      <sf:FechaHoraHusoGenRegistro>2024-01-01T19:20:32+01:00</sf:FechaHoraHusoGenRegistro>
+      <sf:TipoHuella>01</sf:TipoHuella>
+      <sf:Huella>5D0828E03D6CE6DCCC9FE8C61C0465AAE6105EE772C79FF18EC302F9086767EE</sf:Huella>
+    </sf:RegistroAlta>
+  </sfLR:RegistroFactura>
+</sfLR:RegFactuSistemaFacturacion>
