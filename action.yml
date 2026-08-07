@@ -44,7 +44,7 @@ inputs:
       nadie haya tocado nada. El valor 'local' instala desde el propio checkout de la
       action, que es lo que permite probarla antes de publicar la versión.
     required: false
-    default: "0.2.0"
+    default: "0.3.0"
   python-version:
     description: Versión de Python para el entorno de la herramienta.
     required: false

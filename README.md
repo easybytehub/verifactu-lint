@@ -93,7 +93,7 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
-      - uses: easybytehub/verifactu-lint@v0.2.0
+      - uses: easybytehub/verifactu-lint@v0.3.0
         with:
           ficheros: "registros/*.xml"
           fallar: "false"      # que no aborte antes de subir el informe
