@@ -171,6 +171,26 @@ verifactu-lint registros/*.xml --formato sarif > verifactu.sarif
 
 Un ejemplo real de esa cautela: la orden admite `123.1` y `123.10` como el mismo importe, y cada forma produce un SHA-256 distinto. Un verificador que calculase sólo una declararía incorrecta una huella que la AEAT acepta. `verifactu-lint` prueba las formas admisibles antes de afirmar nada.
 
+## Validar contra el XSD no es cumplir el reglamento
+
+Es la distinción que justifica esta herramienta, y está demostrada en la suite en vez
+de afirmada: **los ejemplos con defectos de este repositorio validan contra los
+esquemas oficiales de la AEAT**.
+
+`ejemplos/cadena-rota.xml` es impecable para `SuministroLR.xsd` y tiene la cadena de
+huellas partida. `ejemplos/eventos-con-defectos.xml` valida y le faltan los datos
+propios de un evento de exportación.
+
+Un esquema comprueba **forma**; no sabe calcular un SHA-256, no conoce el orden de
+los registros y no puede saber que a un tipo de evento le corresponde un bloque
+concreto. Esa franja —lo estructuralmente correcto y sustantivamente incorrecto— es
+donde trabaja `verifactu-lint`.
+
+Los XSD oficiales están versionados en [`esquemas/`](esquemas/) y la suite los usa
+para comprobar que los ejemplos son ficheros que un sistema real podría haber
+emitido. Sin ese ancla, las pruebas se construirían con la misma interpretación del
+reglamento que luego verifican.
+
 ## Sobre qué se apoya
 
 - **RD 1007/2023**, de 5 de diciembre — Reglamento de requisitos de los sistemas informáticos de facturación.

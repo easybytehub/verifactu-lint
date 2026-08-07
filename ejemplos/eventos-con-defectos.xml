@@ -1,19 +1,77 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<RegFactuSistemaFacturacion>
-  <RegistroEvento><IDVersion>1.0</IDVersion><Evento>
-      <SistemaInformatico><NombreRazon>Ejemplo SL</NombreRazon><NIF>89890001K</NIF>
-        <IdSistemaInformatico>A1</IdSistemaInformatico><Version>1.0</Version>
-        <NumeroInstalacion>0001</NumeroInstalacion></SistemaInformatico>
-      <ObligadoEmision><NombreRazon>Cliente SL</NombreRazon><NIF>12345678Z</NIF></ObligadoEmision>
-      <FechaHoraHusoGenEvento>2024-01-01T19:20:30+01:00</FechaHoraHusoGenEvento><TipoEvento>01</TipoEvento>
-      <Encadenamiento><PrimerEvento>S</PrimerEvento></Encadenamiento><TipoHuella>01</TipoHuella>
-      <HuellaEvento>E6EEFF510A9729F7066D1B2713EAF95A33D678DB847755D6F9010E81AA0691BF</HuellaEvento><ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:SignatureValue>x</ds:SignatureValue></ds:Signature></Evento></RegistroEvento>
-  <RegistroEvento><IDVersion>1.0</IDVersion><Evento>
-      <SistemaInformatico><NombreRazon>Ejemplo SL</NombreRazon><NIF>89890001K</NIF>
-        <IdSistemaInformatico>A1</IdSistemaInformatico><Version>1.0</Version>
-        <NumeroInstalacion>0001</NumeroInstalacion></SistemaInformatico>
-      <ObligadoEmision><NombreRazon>Cliente SL</NombreRazon><NIF>12345678Z</NIF></ObligadoEmision>
-      <FechaHoraHusoGenEvento>2024-01-01T19:21:30+01:00</FechaHoraHusoGenEvento><TipoEvento>08</TipoEvento>
-      <Encadenamiento><EventoAnterior><TipoEvento>01</TipoEvento><FechaHoraHusoGenEvento>2024-01-01T19:21:30+01:00</FechaHoraHusoGenEvento><HuellaEvento>FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF</HuellaEvento></EventoAnterior></Encadenamiento><TipoHuella>01</TipoHuella>
-      <HuellaEvento>2E7F6C6FFC19C1EAEE05ED3957620F216F75C8ECDF864E49B65A833172CF1C70</HuellaEvento><ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:SignatureValue>x</ds:SignatureValue></ds:Signature></Evento></RegistroEvento>
-</RegFactuSistemaFacturacion>
+<sf:RegistroEventos xmlns:sf="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/EventosSIF.xsd">
+  <sf:RegistroEvento>
+    <sf:IDVersion>1.0</sf:IDVersion>
+    <sf:Evento>
+      <sf:SistemaInformatico>
+        <sf:NombreRazon>EasyByte Hub S. Coop. Mad.</sf:NombreRazon>
+        <sf:NIF>89890001K</sf:NIF>
+        <sf:NombreSistemaInformatico>Sistema de Ejemplo</sf:NombreSistemaInformatico>
+        <sf:IdSistemaInformatico>A1</sf:IdSistemaInformatico>
+        <sf:Version>1.0</sf:Version>
+        <sf:NumeroInstalacion>0001</sf:NumeroInstalacion>
+        <sf:TipoUsoPosibleSoloVerifactu>N</sf:TipoUsoPosibleSoloVerifactu>
+        <sf:TipoUsoPosibleMultiOT>N</sf:TipoUsoPosibleMultiOT>
+        <sf:IndicadorMultiplesOT>N</sf:IndicadorMultiplesOT>
+      </sf:SistemaInformatico>
+      <sf:ObligadoEmision>
+        <sf:NombreRazon>Empresa de Ejemplo SL</sf:NombreRazon>
+        <sf:NIF>12345678Z</sf:NIF>
+      </sf:ObligadoEmision>
+      <sf:FechaHoraHusoGenEvento>2024-01-01T19:20:30+01:00</sf:FechaHoraHusoGenEvento>
+      <sf:TipoEvento>01</sf:TipoEvento>
+      
+      <sf:Encadenamiento><sf:PrimerEvento>S</sf:PrimerEvento></sf:Encadenamiento>
+      <sf:TipoHuella>01</sf:TipoHuella>
+      <sf:HuellaEvento>E6EEFF510A9729F7066D1B2713EAF95A33D678DB847755D6F9010E81AA0691BF</sf:HuellaEvento>
+      <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+        <ds:SignedInfo>
+          <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+          <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+          <ds:Reference URI="">
+            <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+            <ds:DigestValue>ZXhlbXBsbw==</ds:DigestValue>
+          </ds:Reference>
+        </ds:SignedInfo>
+        <ds:SignatureValue>ZXhlbXBsbw==</ds:SignatureValue>
+      </ds:Signature>
+    </sf:Evento>
+  </sf:RegistroEvento>
+  <sf:RegistroEvento>
+    <sf:IDVersion>1.0</sf:IDVersion>
+    <sf:Evento>
+      <sf:SistemaInformatico>
+        <sf:NombreRazon>EasyByte Hub S. Coop. Mad.</sf:NombreRazon>
+        <sf:NIF>89890001K</sf:NIF>
+        <sf:NombreSistemaInformatico>Sistema de Ejemplo</sf:NombreSistemaInformatico>
+        <sf:IdSistemaInformatico>A1</sf:IdSistemaInformatico>
+        <sf:Version>1.0</sf:Version>
+        <sf:NumeroInstalacion>0001</sf:NumeroInstalacion>
+        <sf:TipoUsoPosibleSoloVerifactu>N</sf:TipoUsoPosibleSoloVerifactu>
+        <sf:TipoUsoPosibleMultiOT>N</sf:TipoUsoPosibleMultiOT>
+        <sf:IndicadorMultiplesOT>N</sf:IndicadorMultiplesOT>
+      </sf:SistemaInformatico>
+      <sf:ObligadoEmision>
+        <sf:NombreRazon>Empresa de Ejemplo SL</sf:NombreRazon>
+        <sf:NIF>12345678Z</sf:NIF>
+      </sf:ObligadoEmision>
+      <sf:FechaHoraHusoGenEvento>2024-01-01T19:21:30+01:00</sf:FechaHoraHusoGenEvento>
+      <sf:TipoEvento>08</sf:TipoEvento>
+      
+      <sf:Encadenamiento><sf:EventoAnterior><sf:TipoEvento>01</sf:TipoEvento><sf:FechaHoraHusoGenEvento>2024-01-01T19:21:30+01:00</sf:FechaHoraHusoGenEvento><sf:HuellaEvento>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA</sf:HuellaEvento></sf:EventoAnterior></sf:Encadenamiento>
+      <sf:TipoHuella>01</sf:TipoHuella>
+      <sf:HuellaEvento>C79B6D74B3380F71794AA71AF2E24F3C17D6E443A104B400AD9A296A24DE6E2A</sf:HuellaEvento>
+      <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+        <ds:SignedInfo>
+          <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+          <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+          <ds:Reference URI="">
+            <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+            <ds:DigestValue>ZXhlbXBsbw==</ds:DigestValue>
+          </ds:Reference>
+        </ds:SignedInfo>
+        <ds:SignatureValue>ZXhlbXBsbw==</ds:SignatureValue>
+      </ds:Signature>
+    </sf:Evento>
+  </sf:RegistroEvento>
+</sf:RegistroEventos>
