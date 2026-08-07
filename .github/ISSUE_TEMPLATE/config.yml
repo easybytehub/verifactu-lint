@@ -1,0 +1,13 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Vulnerabilidad de seguridad
+    url: https://github.com/easybytehub/verifactu-lint/security/advisories/new
+    about: >
+      Por el canal privado, no como issue público. Interesan especialmente el
+      agotamiento de recursos con un XML manipulado y cualquier lectura de fichero o
+      red provocada por su contenido.
+  - name: Dudas sobre la norma, no sobre la herramienta
+    url: https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu.html
+    about: >
+      Este repositorio no interpreta el reglamento por nadie. Para dudas sobre qué
+      exige la norma, la AEAT publica su FAQ de desarrolladores y atiende un buzón.
