@@ -52,8 +52,12 @@ jobs:
       # haga su trabajo; esto sí.
       - name: La CLI sobre los ejemplos
         run: |
-          python -m verifactu_lint.cli ejemplos/cadena-conforme.xml
-          if python -m verifactu_lint.cli ejemplos/cadena-rota.xml; then
-            echo "::error::la cadena rota debería haber salido con código 1"
-            exit 1
-          fi
+          for conforme in ejemplos/cadena-conforme.xml ejemplos/eventos-conforme.xml; do
+            python -m verifactu_lint.cli "$conforme"
+          done
+          for roto in ejemplos/cadena-rota.xml ejemplos/eventos-con-defectos.xml; do
+            if python -m verifactu_lint.cli "$roto"; then
+              echo "::error::$roto debería haber salido con código 1"
+              exit 1
+            fi
+          done

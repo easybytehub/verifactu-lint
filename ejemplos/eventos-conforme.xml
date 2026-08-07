@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RegFactuSistemaFacturacion>
+  <RegistroEvento><IDVersion>1.0</IDVersion><Evento>
+      <SistemaInformatico><NombreRazon>Ejemplo SL</NombreRazon><NIF>89890001K</NIF>
+        <IdSistemaInformatico>A1</IdSistemaInformatico><Version>1.0</Version>
+        <NumeroInstalacion>0001</NumeroInstalacion></SistemaInformatico>
+      <ObligadoEmision><NombreRazon>Cliente SL</NombreRazon><NIF>12345678Z</NIF></ObligadoEmision>
+      <FechaHoraHusoGenEvento>2024-01-01T19:20:30+01:00</FechaHoraHusoGenEvento><TipoEvento>01</TipoEvento>
+      <Encadenamiento><PrimerEvento>S</PrimerEvento></Encadenamiento><TipoHuella>01</TipoHuella>
+      <HuellaEvento>E6EEFF510A9729F7066D1B2713EAF95A33D678DB847755D6F9010E81AA0691BF</HuellaEvento><ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:SignatureValue>x</ds:SignatureValue></ds:Signature></Evento></RegistroEvento>
+  <RegistroEvento><IDVersion>1.0</IDVersion><Evento>
+      <SistemaInformatico><NombreRazon>Ejemplo SL</NombreRazon><NIF>89890001K</NIF>
+        <IdSistemaInformatico>A1</IdSistemaInformatico><Version>1.0</Version>
+        <NumeroInstalacion>0001</NumeroInstalacion></SistemaInformatico>
+      <ObligadoEmision><NombreRazon>Cliente SL</NombreRazon><NIF>12345678Z</NIF></ObligadoEmision>
+      <FechaHoraHusoGenEvento>2024-01-01T19:21:30+01:00</FechaHoraHusoGenEvento><TipoEvento>10</TipoEvento>
+      <DatosPropiosEvento><ResumenEventos/></DatosPropiosEvento><Encadenamiento><EventoAnterior><TipoEvento>01</TipoEvento><FechaHoraHusoGenEvento>2024-01-01T19:21:30+01:00</FechaHoraHusoGenEvento><HuellaEvento>E6EEFF510A9729F7066D1B2713EAF95A33D678DB847755D6F9010E81AA0691BF</HuellaEvento></EventoAnterior></Encadenamiento><TipoHuella>01</TipoHuella>
+      <HuellaEvento>CAAF37D9D173D805099403F852AAF3CDDF281D7ED1CCFC819B15DC87D30D4C9A</HuellaEvento><ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:SignatureValue>x</ds:SignatureValue></ds:Signature></Evento></RegistroEvento>
+  <RegistroEvento><IDVersion>1.0</IDVersion><Evento>
+      <SistemaInformatico><NombreRazon>Ejemplo SL</NombreRazon><NIF>89890001K</NIF>
+        <IdSistemaInformatico>A1</IdSistemaInformatico><Version>1.0</Version>
+        <NumeroInstalacion>0001</NumeroInstalacion></SistemaInformatico>
+      <ObligadoEmision><NombreRazon>Cliente SL</NombreRazon><NIF>12345678Z</NIF></ObligadoEmision>
+      <FechaHoraHusoGenEvento>2024-01-01T19:22:30+01:00</FechaHoraHusoGenEvento><TipoEvento>02</TipoEvento>
+      <Encadenamiento><EventoAnterior><TipoEvento>01</TipoEvento><FechaHoraHusoGenEvento>2024-01-01T19:22:30+01:00</FechaHoraHusoGenEvento><HuellaEvento>CAAF37D9D173D805099403F852AAF3CDDF281D7ED1CCFC819B15DC87D30D4C9A</HuellaEvento></EventoAnterior></Encadenamiento><TipoHuella>01</TipoHuella>
+      <HuellaEvento>AD7E59B813779B5EB6AEE3F5D8FAEA3FEB086F9A5A47FFC5E784B0EADD4737B6</HuellaEvento><ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:SignatureValue>x</ds:SignatureValue></ds:Signature></Evento></RegistroEvento>
+</RegFactuSistemaFacturacion>

@@ -79,6 +79,47 @@ class Registro:
         return f"#{self.orden + 1} {serie}"
 
 
+@dataclass(frozen=True)
+class Evento:
+    """Un registro de evento.
+
+    **Los eventos sólo existen en la modalidad NO VERI\\*FACTU.** Un sistema que
+    remite sus registros a la sede da por cumplidos los requisitos de seguridad con
+    esa remisión; el que no los remite tiene que demostrar por su cuenta integridad,
+    inalterabilidad y trazabilidad, y el registro de eventos es cómo lo hace. De ahí
+    que la modalidad «discreta» sea en realidad la exigente.
+
+    Su cadena de huellas es **independiente** de la de facturación: encadena con
+    `HuellaEvento` del evento anterior, no con la de ninguna factura.
+    """
+
+    orden: int
+    tipo_evento: str | None = None
+    fecha_hora_huso: str | None = None
+    tipo_huella: str | None = None
+    huella: str | None = None
+    primer_evento: str | None = None
+    anterior_tipo_evento: str | None = None
+    anterior_fecha_hora: str | None = None
+    anterior_huella: str | None = None
+    nif_obligado: str | None = None
+    # Nombre del elemento hijo de `DatosPropiosEvento`, que el esquema declara como
+    # `choice`: como mucho hay uno, y cuál es depende del tipo de evento.
+    datos_propios: str | None = None
+    otros_datos: str | None = None
+    firmado: bool = False
+    sistema: SistemaInformatico = field(default_factory=SistemaInformatico)
+
+    @property
+    def es_primer_evento(self) -> bool:
+        return (self.primer_evento or "").strip().upper() == "S"
+
+    @property
+    def referencia(self) -> str:
+        tipo = self.tipo_evento or "??"
+        return f"evento #{self.orden + 1} (tipo {tipo})"
+
+
 def _local(tag: str) -> str:
     """El nombre del elemento sin su namespace.
 
@@ -261,3 +302,80 @@ def lee(origen: Path | str) -> list[Registro]:
         elif nombre == "RegistroAnulacion":
             registros.append(_lee_anulacion(nodo, len(registros)))
     return registros
+
+
+def _lee_evento(nodo: ET.Element, orden: int) -> Evento:
+    """Lee el bloque `Evento` de un `RegistroEvento`."""
+    encadenamiento = _hijo(nodo, "Encadenamiento")
+    anterior = (
+        _hijo(encadenamiento, "EventoAnterior") if encadenamiento is not None else None
+    )
+
+    datos = _hijo(nodo, "DatosPropiosEvento")
+    # El esquema declara `DatosPropiosEvento` como `choice`: como mucho un hijo, y
+    # cuál sea depende del tipo de evento. Guardamos su nombre para poder contrastar
+    # esa correspondencia.
+    hijo_datos: str | None = None
+    if datos is not None:
+        for h in datos:
+            hijo_datos = _local(h.tag)
+            break
+
+    # `ds:Signature` no lleva `minOccurs="0"` en el esquema: la firma es obligatoria
+    # en todo registro de evento, y su ausencia es un hallazgo.
+    firmado = any(_local(h.tag) == "Signature" for h in nodo.iter())
+
+    return Evento(
+        orden=orden,
+        tipo_evento=_valor(nodo, "TipoEvento"),
+        fecha_hora_huso=_valor(nodo, "FechaHoraHusoGenEvento"),
+        tipo_huella=_valor(nodo, "TipoHuella"),
+        huella=_valor(nodo, "HuellaEvento"),
+        primer_evento=(
+            _valor(encadenamiento, "PrimerEvento") if encadenamiento is not None else None
+        ),
+        anterior_tipo_evento=(
+            _valor(anterior, "TipoEvento") if anterior is not None else None
+        ),
+        anterior_fecha_hora=(
+            _valor(anterior, "FechaHoraHusoGenEvento") if anterior is not None else None
+        ),
+        anterior_huella=_valor(anterior, "HuellaEvento") if anterior is not None else None,
+        nif_obligado=_valor(nodo, "ObligadoEmision", "NIF"),
+        datos_propios=hijo_datos,
+        otros_datos=_valor(nodo, "OtrosDatosEvento"),
+        firmado=firmado,
+        sistema=_lee_sistema(_hijo(nodo, "SistemaInformatico")),
+    )
+
+
+def lee_eventos(origen: Path | str) -> list[Evento]:
+    """Lee un fichero XML y devuelve sus registros de evento, en orden.
+
+    Los eventos suelen vivir en ficheros propios, separados de los de facturación,
+    y su cadena de huellas es independiente. Por eso son una función distinta y no
+    un tipo más dentro de `lee`: mezclarlos produciría roturas de encadenamiento
+    inventadas entre una factura y un evento que nunca estuvieron encadenados.
+    """
+    ruta = Path(origen)
+    try:
+        contenido = ruta.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        raise ErrorDeLectura(f"{ruta}: no se pudo abrir ({exc})") from exc
+
+    _rechaza_doctype(contenido[:_PROLOGO], ruta)
+
+    try:
+        raiz = ET.fromstring(contenido)  # noqa: S314
+    except ET.ParseError as exc:
+        raise ErrorDeLectura(f"{ruta}: XML mal formado ({exc})") from exc
+
+    eventos: list[Evento] = []
+    for nodo in raiz.iter():
+        if _local(nodo.tag) != "RegistroEvento":
+            continue
+        cuerpo = _hijo(nodo, "Evento")
+        # El diseño mete todo bajo `Evento`; si un emisor lo aplana, se lee el propio
+        # `RegistroEvento` antes que devolver un evento vacío.
+        eventos.append(_lee_evento(cuerpo if cuerpo is not None else nodo, len(eventos)))
+    return eventos
