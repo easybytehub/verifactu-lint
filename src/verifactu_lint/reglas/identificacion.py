@@ -25,11 +25,29 @@ def numeracion_no_duplicada(registros: list[Registro]) -> list[Hallazgo]:
     Se cuentan altas y anulaciones por separado a propósito: anular una factura
     emitida es exactamente el caso legítimo en que la misma terna aparece dos veces,
     una en cada tipo de registro.
+
+    **Las altas de subsanación quedan fuera del recuento**, por el mismo motivo. El
+    apartado 17 del FAQ manda corregir una factura errónea generando un alta con
+    `Subsanacion = "S"` sobre la MISMA factura: tanto si el registro original fue
+    aceptado por la AEAT como si fue rechazado —y entonces además `RechazoPrevio`—.
+    Repetir la terna ahí no es un defecto, es el procedimiento.
+
+    El apartado 6, que es el que sostiene esta regla, prohíbe una cosa distinta:
+    reutilizar la numeración de una factura DIFERENTE, como dar el número de una
+    factura de prueba borrada a la siguiente. Contar la subsanación como duplicado
+    convertía en error el flujo que la norma obliga a seguir, que es lo peor que
+    puede hacer una herramienta de cumplimiento: empujar a incumplir para pasar.
+
+    Lo que esto NO comprueba es el caso inverso —una subsanación sin alta previa con
+    su misma terna—, que sería un hallazgo legítimo pero exige distinguir si el fichero
+    contiene el registro rechazado o no. Queda fuera a propósito.
     """
     hallazgos: list[Hallazgo] = []
     vistos: dict[tuple[str, str, str, str], list[Registro]] = defaultdict(list)
 
     for r in registros:
+        if r.tipo == "alta" and (r.subsanacion or "").strip().upper() == "S":
+            continue  # repite la terna a propósito; ver el docstring
         clave = (
             r.tipo,
             (r.id_emisor or "").strip(),

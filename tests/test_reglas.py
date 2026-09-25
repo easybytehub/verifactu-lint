@@ -48,6 +48,8 @@ def alta_xml(
     tipo_impositivo: str = "11.116",
     tipo_huella: str = "01",
     sistema: str = SISTEMA,
+    subsanacion: str | None = None,
+    rechazo_previo: str | None = None,
 ) -> str:
     if anterior is None:
         encadenamiento = "<Encadenamiento><PrimerRegistro>S</PrimerRegistro></Encadenamiento>"
@@ -60,6 +62,12 @@ def alta_xml(
           <Huella>{anterior}</Huella>
         </RegistroAnterior>
       </Encadenamiento>"""
+    # El esquema coloca Subsanacion y RechazoPrevio entre IDFactura y TipoFactura.
+    marcas = ""
+    if subsanacion:
+        marcas += f"<Subsanacion>{subsanacion}</Subsanacion>"
+    if rechazo_previo:
+        marcas += f"<RechazoPrevio>{rechazo_previo}</RechazoPrevio>"
     return f"""
     <RegistroAlta>
       <IDVersion>1.0</IDVersion>
@@ -68,6 +76,7 @@ def alta_xml(
         <NumSerieFactura>{num_serie}</NumSerieFactura>
         <FechaExpedicionFactura>{fecha}</FechaExpedicionFactura>
       </IDFactura>
+      {marcas}
       <TipoFactura>F1</TipoFactura>
       <Destinatarios>
         <IDDestinatario><NombreRazon>Cliente SL</NombreRazon><NIF>12345678Z</NIF></IDDestinatario>
@@ -245,6 +254,56 @@ class TestIdentificacion:
                          "2024-01-01T19:20:31+01:00")
         dos = alta_xml("FA/1", h2, anterior=h, hora="2024-01-01T19:20:31+01:00")
         ruta = escribe(tmp_path, envuelve(uno, dos))
+        informe = audita(lee(ruta))
+        assert "RRSIF010" in reglas_de(informe)
+
+    def test_subsanacion_no_es_duplicado(self, tmp_path: Path) -> None:
+        """El alta de subsanación repite la terna porque la AEAT lo manda.
+
+        FAQ de desarrolladores, ap. 17: una factura errónea ya registrada se corrige
+        generando un alta con `Subsanacion = "S"` sobre la MISMA factura. Marcarlo como
+        numeración duplicada obligaba a elegir entre el informe en verde y el
+        procedimiento correcto.
+        """
+        h = huella_alta(NIF, "FA/1", "01-01-2024", "F1", "12.35", "123.45", None,
+                        "2024-01-01T19:20:30+01:00")
+        original = alta_xml("FA/1", h)
+        h2 = huella_alta(NIF, "FA/1", "01-01-2024", "F1", "12.35", "123.45", h,
+                         "2024-01-01T19:20:31+01:00")
+        subsana = alta_xml("FA/1", h2, anterior=h, hora="2024-01-01T19:20:31+01:00",
+                           subsanacion="S")
+        ruta = escribe(tmp_path, envuelve(original, subsana))
+        informe = audita(lee(ruta))
+        assert "RRSIF010" not in reglas_de(informe)
+
+    def test_subsanacion_de_registro_rechazado_tampoco(self, tmp_path: Path) -> None:
+        """Cuando el original fue rechazado, la subsanación lleva además RechazoPrevio."""
+        h = huella_alta(NIF, "FA/2", "01-01-2024", "F1", "12.35", "123.45", None,
+                        "2024-01-01T19:20:30+01:00")
+        original = alta_xml("FA/2", h)
+        h2 = huella_alta(NIF, "FA/2", "01-01-2024", "F1", "12.35", "123.45", h,
+                         "2024-01-01T19:20:31+01:00")
+        subsana = alta_xml("FA/2", h2, anterior=h, hora="2024-01-01T19:20:31+01:00",
+                           subsanacion="S", rechazo_previo="X")
+        ruta = escribe(tmp_path, envuelve(original, subsana))
+        informe = audita(lee(ruta))
+        assert "RRSIF010" not in reglas_de(informe)
+
+    def test_duplicado_real_sigue_saltando_con_subsanaciones_en_el_fichero(
+        self, tmp_path: Path
+    ) -> None:
+        """El arreglo no puede desactivar la regla: dos altas normales siguen siendo error."""
+        h = huella_alta(NIF, "FA/3", "01-01-2024", "F1", "12.35", "123.45", None,
+                        "2024-01-01T19:20:30+01:00")
+        uno = alta_xml("FA/3", h)
+        h2 = huella_alta(NIF, "FA/3", "01-01-2024", "F1", "12.35", "123.45", h,
+                         "2024-01-01T19:20:31+01:00")
+        dos = alta_xml("FA/3", h2, anterior=h, hora="2024-01-01T19:20:31+01:00")
+        h3 = huella_alta(NIF, "FA/4", "01-01-2024", "F1", "12.35", "123.45", h2,
+                         "2024-01-01T19:20:32+01:00")
+        otra = alta_xml("FA/4", h3, anterior=h2, hora="2024-01-01T19:20:32+01:00",
+                        subsanacion="S")
+        ruta = escribe(tmp_path, envuelve(uno, dos, otra))
         informe = audita(lee(ruta))
         assert "RRSIF010" in reglas_de(informe)
 
