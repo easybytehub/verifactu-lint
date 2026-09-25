@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 from verifactu_lint import __version__
+from verifactu_lint import historico as hist
 from verifactu_lint.hallazgos import Hallazgo, Informe
 from verifactu_lint.registros import ErrorDeLectura, lee, lee_eventos
 from verifactu_lint.reglas import audita, audita_eventos
@@ -60,6 +61,15 @@ def _argumentos(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="salir con código 1 también si hay avisos",
     )
+    parser.add_argument(
+        "--historico",
+        type=Path,
+        metavar="FICHERO",
+        help=(
+            "recuerda entre ejecuciones qué instalaciones se han visto, para avisar "
+            "cuando una vuelve a arrancar su cadena (se crea si no existe)"
+        ),
+    )
     parser.add_argument("--sin-color", action="store_true", help="desactiva el color")
     parser.add_argument("--version", action="version", version=f"verifactu-lint {__version__}")
     return parser.parse_args(argv)
@@ -67,6 +77,17 @@ def _argumentos(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _argumentos(argv)
+
+    # El histórico se lee UNA vez y se escribe UNA vez, al final: si se guardara por
+    # fichero, auditar varios de la misma instalación anotaría el arranque con el
+    # primero y avisaría con los siguientes, que son el mismo sistema.
+    estado: dict[str, object] = {}
+    if args.historico is not None:
+        try:
+            estado = hist.lee(args.historico)
+        except hist.ErrorDeHistorico as exc:
+            print(f"verifactu-lint: {exc}", file=sys.stderr)
+            return 2
 
     hallazgos: list[Hallazgo] = []
     analizados = 0
@@ -109,7 +130,19 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             hallazgos.extend(informe_parcial.hallazgos)
             analizados += informe_parcial.registros_analizados
+
+        if args.historico is not None and registros:
+            del_historico, estado = hist.comprueba(registros, estado, fichero=str(ruta))
+            hallazgos.extend(del_historico)
+
         ficheros_leidos.append(str(ruta))
+
+    if args.historico is not None and ficheros_leidos:
+        try:
+            hist.escribe(args.historico, estado)
+        except hist.ErrorDeHistorico as exc:
+            print(f"verifactu-lint: {exc}", file=sys.stderr)
+            return 2
 
     informe = Informe(
         hallazgos=hallazgos,

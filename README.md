@@ -129,7 +129,33 @@ verifactu-lint registros/*.xml --formato sarif > verifactu.sarif
 
 # que los avisos también rompan la build
 verifactu-lint registros.xml --estricto
+
+# recordar qué instalaciones se han visto, entre ejecuciones
+verifactu-lint registros.xml --historico instalaciones.json
 ```
+
+### `--historico`: lo que no se ve en un solo fichero
+
+El `NumeroInstalacion` no puede repetirse nunca para un mismo obligado, ni siquiera
+formateando el equipo y reinstalando el mismo software: el SIF resultante debe llevar
+uno distinto ([FAQ de desarrolladores][faq], ap. 4). Eso ocurre **entre** instalaciones
+separadas en el tiempo, así que mirando un fichero no se ve nunca.
+
+`--historico` guarda en un JSON qué instalaciones han pasado por aquí. Lo que anota no
+es la terna que identifica al SIF, sino la terna **con la huella de cada arranque de
+cadena**, y esa distinción es la que hace la comprobación utilizable:
+
+- Auditar el mismo SIF todos los días en el CI **no** avisa: el arranque ya está
+  anotado y se reconoce. Una herramienta que avisa a diario se apaga a la semana.
+- Que una instalación ya conocida arranque una cadena **nueva** sí avisa (`RRSIF014`):
+  un sistema en marcha encadena, no vuelve a emitir `PrimerRegistro`. Si empezó de
+  cero conservando su número, es justo lo que la norma prohíbe.
+
+El fichero es tuyo y sólo se toca cuando lo pides. Si existe y no se puede leer, la
+herramienta se para con código `2` en vez de sobrescribirlo: perder el histórico es
+perder lo único que da valor a la comprobación.
+
+[faq]: https://sede.agenciatributaria.gob.es/static_files/AEAT_Desarrolladores/EEDD/IVA/VERI-FACTU/FAQs-Desarrolladores.pdf
 
 **Códigos de salida:** `0` sin errores · `1` con errores (o con avisos si `--estricto`) · `2` si el fichero no se pudo leer **o si ninguno contenía registros** — apuntar al XML equivocado no es lo mismo que estar conforme.
 
