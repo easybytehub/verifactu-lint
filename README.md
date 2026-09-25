@@ -272,4 +272,4 @@ La atestación dice qué commit, qué workflow y qué runner produjeron ese arte
 
 ## Quién lo mantiene
 
-EasyByte Hub S. Coop. Mad. — cooperativa de desarrollo de software a medida en Madrid. Más en https://easybyte.es
+EasyByte Hub S. Coop. Mad. — cooperativa de desarrollo de software a medida. Más en https://easybyte.es
