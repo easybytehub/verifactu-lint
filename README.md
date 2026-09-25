@@ -268,3 +268,8 @@ La atestación dice qué commit, qué workflow y qué runner produjeron ese arte
 ## Licencia
 
 [Apache-2.0](LICENSE).
+
+
+## Quién lo mantiene
+
+EasyByte Hub S. Coop. Mad. — cooperativa de desarrollo de software a medida en Madrid. Más en https://easybyte.es
