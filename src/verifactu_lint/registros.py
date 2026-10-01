@@ -11,8 +11,9 @@ convertiría un hallazgo explicable en un error de arranque.
 
 from __future__ import annotations
 
+import re
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 
@@ -99,6 +100,9 @@ class Registro:
     destinatarios: int = 0
     desglose: tuple[DetalleDesglose, ...] = ()
     sistema: SistemaInformatico = field(default_factory=SistemaInformatico)
+    # Línea del XML donde abre el registro, cuando se puede saber con certeza. La usa la
+    # salida SARIF para que la anotación del CI caiga en el registro y no en la línea N.
+    linea_xml: int | None = None
 
     @property
     def es_rectificativa(self) -> bool:
@@ -147,6 +151,7 @@ class Evento:
     otros_datos: str | None = None
     firmado: bool = False
     sistema: SistemaInformatico = field(default_factory=SistemaInformatico)
+    linea_xml: int | None = None
 
     @property
     def es_primer_evento(self) -> bool:
@@ -340,8 +345,10 @@ def _lee_anulacion(nodo: ET.Element, orden: int) -> Registro:
 # comentarios de cabecera y varias instrucciones de proceso.
 _PROLOGO = 8192
 
+_DECLARACION = re.compile(rb"""<\?xml[^>]*?encoding\s*=\s*["']([A-Za-z0-9._-]+)["']""")
 
-def _rechaza_doctype(texto_inicial: str, ruta: Path) -> None:
+
+def _rechaza_doctype(crudo: bytes, ruta: Path) -> None:
     """Rechaza cualquier documento con DTD interna.
 
     **Por qué antes de parsear y no durante.** `xml.etree` no expande entidades
@@ -354,13 +361,110 @@ def _rechaza_doctype(texto_inicial: str, ruta: Path) -> None:
     nadie: un registro de facturación no declara entidades jamás, así que rechazar
     todo DOCTYPE no pierde ningún fichero legítimo y no añade una dependencia cuya
     única función sería ésta.
+
+    **Se busca en tres lecturas del prólogo, no en una.** Desde 0.4.0 el fichero se
+    parsea en bytes, respetando la codificación que declara, y expat también reconoce
+    UTF-16 con o sin BOM. En latin-1 se ve el DOCTYPE de cualquier codificación
+    compatible con ASCII (UTF-8, ISO-8859-1, Windows-1252); en UTF-16, el de las otras
+    dos que expat acepta. Mirar sólo la primera dejaría pasar un *billion laughs*
+    escrito en UTF-16, que es justo el agujero que este chequeo existe para cerrar.
     """
-    if "<!DOCTYPE" in texto_inicial:
+    inicio = crudo[:_PROLOGO]
+    lecturas = (
+        inicio.decode("latin-1"),
+        inicio.decode("utf-16-le", errors="ignore"),
+        inicio.decode("utf-16-be", errors="ignore"),
+    )
+    if any("<!DOCTYPE" in texto for texto in lecturas):
         raise ErrorDeLectura(
             f"{ruta}: el documento declara un DOCTYPE. verifactu-lint no procesa DTD "
             "ni entidades — un registro de facturación no las necesita, y admitirlas "
             "abre la puerta a un XML que agota la memoria del proceso."
         )
+
+
+def _explica_mal_formado(crudo: bytes, exc: Exception, ruta: Path) -> str:
+    """El mensaje de un XML que no se pudo parsear, y por qué, si se puede decir.
+
+    El caso que merece explicación propia es el de la codificación: un fichero que
+    declara UTF-8 —o no declara nada, que en XML significa lo mismo— y está escrito en
+    ISO-8859-1 o Windows-1252, como hacen muchos ERP. El mensaje de expat («invalid
+    token») no lo dice, y la causa no es evidente para quien lo lee.
+    """
+    m = _DECLARACION.search(crudo[:512])
+    declarada = m.group(1).decode("ascii").lower() if m else None
+    if declarada in (None, "utf-8", "utf8"):
+        try:
+            crudo.decode("utf-8")
+        except UnicodeDecodeError as error:
+            linea = crudo[: error.start].count(b"\n") + 1
+            origen = (
+                "declara UTF-8" if declarada
+                else "no declara codificación (y entonces es UTF-8)"
+            )
+            return (
+                f"{ruta}: línea {linea}: el fichero {origen}, pero contiene bytes que no son "
+                f"UTF-8 (0x{crudo[error.start]:02X}). Suele ser un fichero escrito en "
+                "ISO-8859-1 o Windows-1252: declara su codificación real en "
+                '<?xml version="1.0" encoding="..."?> o escríbelo en UTF-8.'
+            )
+    return f"{ruta}: XML mal formado ({exc})"
+
+
+def _documento(origen: Path | str) -> tuple[ET.Element, bytes]:
+    """Lee y parsea el fichero, una sola vez y en bytes.
+
+    **En bytes, no como texto, desde 0.4.0.** Antes se leía forzando UTF-8 con
+    `errors="replace"`, y eso ignoraba la codificación que el propio XML declara: un
+    fichero ISO-8859-1 con una «Ñ» o un «º» en el número de serie se leía con un
+    carácter de sustitución, la huella recalculada no cuadraba y salía un ERROR de
+    huella sobre un registro correcto. Pasándole los bytes, expat aplica la
+    codificación declarada, que es lo que manda la especificación de XML; y si los
+    bytes no corresponden a la que declara, lo dice en vez de leer otra cosa.
+    """
+    ruta = Path(origen)
+    try:
+        crudo = ruta.read_bytes()
+    except OSError as exc:
+        raise ErrorDeLectura(f"{ruta}: no se pudo abrir ({exc})") from exc
+
+    _rechaza_doctype(crudo, ruta)
+
+    try:
+        raiz = ET.fromstring(crudo)  # noqa: S314
+    except ET.ParseError as exc:
+        raise ErrorDeLectura(_explica_mal_formado(crudo, exc, ruta)) from exc
+    except (ValueError, LookupError) as exc:
+        # expat sólo admite codificaciones de un byte por carácter, UTF-8 y UTF-16.
+        raise ErrorDeLectura(
+            f"{ruta}: codificación no admitida ({exc}). Escríbelo en UTF-8."
+        ) from exc
+    return raiz, crudo
+
+
+def _lineas_de(crudo: bytes, etiquetas: tuple[str, ...], esperados: int) -> list[int | None]:
+    """Línea del XML en que abre cada elemento con esas etiquetas, en orden.
+
+    `xml.etree` no da números de línea, así que se buscan las aperturas en los bytes.
+    **Sólo se usan si cuadran**: si el número de aperturas encontradas no coincide con
+    el de elementos parseados —un comentario que contiene una etiqueta, un fichero en
+    UTF-16—, se devuelve `None` para todos. Una línea equivocada es peor que ninguna.
+    """
+    patron = re.compile(
+        rb"<(?:[A-Za-z_][\w.\-]*:)?(?:"
+        + b"|".join(e.encode() for e in etiquetas)
+        + rb")[\s/>]"
+    )
+    posiciones = [m.start() for m in patron.finditer(crudo)]
+    if len(posiciones) != esperados:
+        return [None] * esperados
+    lineas: list[int | None] = []
+    contadas, previa = 1, 0
+    for pos in posiciones:
+        contadas += crudo.count(b"\n", previa, pos)
+        previa = pos
+        lineas.append(contadas)
+    return lineas
 
 
 def lee(origen: Path | str) -> list[Registro]:
@@ -370,18 +474,7 @@ def lee(origen: Path | str) -> list[Registro]:
     hallazgo que dice «se rompe entre el 40 y el 41» sólo es accionable si esos
     números corresponden a lo que el usuario ve en su fichero.
     """
-    ruta = Path(origen)
-    try:
-        contenido = ruta.read_text(encoding="utf-8", errors="replace")
-    except OSError as exc:
-        raise ErrorDeLectura(f"{ruta}: no se pudo abrir ({exc})") from exc
-
-    _rechaza_doctype(contenido[:_PROLOGO], ruta)
-
-    try:
-        raiz = ET.fromstring(contenido)  # noqa: S314
-    except ET.ParseError as exc:
-        raise ErrorDeLectura(f"{ruta}: XML mal formado ({exc})") from exc
+    raiz, crudo = _documento(origen)
 
     registros: list[Registro] = []
     for nodo in raiz.iter():
@@ -390,7 +483,9 @@ def lee(origen: Path | str) -> list[Registro]:
             registros.append(_lee_alta(nodo, len(registros)))
         elif nombre == "RegistroAnulacion":
             registros.append(_lee_anulacion(nodo, len(registros)))
-    return registros
+
+    lineas = _lineas_de(crudo, ("RegistroAlta", "RegistroAnulacion"), len(registros))
+    return [replace(r, linea_xml=linea) for r, linea in zip(registros, lineas, strict=True)]
 
 
 def _lee_evento(nodo: ET.Element, orden: int) -> Evento:
@@ -446,18 +541,7 @@ def lee_eventos(origen: Path | str) -> list[Evento]:
     un tipo más dentro de `lee`: mezclarlos produciría roturas de encadenamiento
     inventadas entre una factura y un evento que nunca estuvieron encadenados.
     """
-    ruta = Path(origen)
-    try:
-        contenido = ruta.read_text(encoding="utf-8", errors="replace")
-    except OSError as exc:
-        raise ErrorDeLectura(f"{ruta}: no se pudo abrir ({exc})") from exc
-
-    _rechaza_doctype(contenido[:_PROLOGO], ruta)
-
-    try:
-        raiz = ET.fromstring(contenido)  # noqa: S314
-    except ET.ParseError as exc:
-        raise ErrorDeLectura(f"{ruta}: XML mal formado ({exc})") from exc
+    raiz, crudo = _documento(origen)
 
     eventos: list[Evento] = []
     for nodo in raiz.iter():
@@ -467,4 +551,6 @@ def lee_eventos(origen: Path | str) -> list[Evento]:
         # El diseño mete todo bajo `Evento`; si un emisor lo aplana, se lee el propio
         # `RegistroEvento` antes que devolver un evento vacío.
         eventos.append(_lee_evento(cuerpo if cuerpo is not None else nodo, len(eventos)))
-    return eventos
+
+    lineas = _lineas_de(crudo, ("RegistroEvento",), len(eventos))
+    return [replace(e, linea_xml=linea) for e, linea in zip(eventos, lineas, strict=True)]

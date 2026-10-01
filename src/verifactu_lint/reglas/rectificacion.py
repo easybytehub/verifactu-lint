@@ -110,24 +110,31 @@ def rectificativa_completa(registros: list[Registro]) -> list[Hallazgo]:
             )
 
         if r.facturas_rectificadas == 0:
-            # R5 rectifica facturas simplificadas, que pueden no ser identificables
-            # una a una: ahí no se puede afirmar el incumplimiento.
-            severidad = Severidad.INCOMPLETO if tipo == "R5" else Severidad.ERROR
+            # `FacturasRectificadas` no es obligatoria en el esquema (Validaciones AEAT
+            # §4), y hay rectificativas legítimas sin facturas identificadas: un rappel
+            # por volumen, donde basta con indicar el periodo (FAQ desarrolladores,
+            # ap. 19; art. 15.4 del RD 1619/2012), o simplificadas que no se pueden
+            # identificar una a una (R5). Desde aquí no se distingue un caso del otro,
+            # así que no se afirma el incumplimiento: se pide comprobarlo.
+            motivo = (
+                "En R5 puede ser legítimo si las simplificadas rectificadas no eran "
+                "identificables individualmente."
+                if tipo == "R5"
+                else "Es legítimo cuando la rectificación no se refiere a facturas "
+                "concretas —un rappel por volumen de operaciones, por ejemplo—, en cuyo "
+                "caso basta con indicar el periodo (FAQ desarrolladores, ap. 19; art. "
+                "15.4 del RD 1619/2012). Si rectifica facturas concretas, deben constar."
+            )
             hallazgos.append(
                 Hallazgo(
                     regla="RRSIF031",
-                    severidad=severidad,
+                    severidad=Severidad.INCOMPLETO,
                     titulo=f"La rectificativa {tipo} no identifica ninguna factura rectificada",
                     detalle=(
-                        "No informa `FacturasRectificadas/IDFacturaRectificada`."
-                        + (
-                            "\nEn R5 puede ser legítimo si las simplificadas rectificadas "
-                            "no eran identificables individualmente; conviene comprobarlo."
-                            if tipo == "R5"
-                            else ""
-                        )
+                        "No informa `FacturasRectificadas/IDFacturaRectificada`.\n"
+                        f"{motivo} Conviene comprobar cuál es el caso."
                     ),
-                    norma=NORMA_FAQ17,
+                    norma=f"{NORMA_FAQ17}; ap. 19 — rappels",
                     referencia=r.referencia,
                     orden=r.orden,
                 )

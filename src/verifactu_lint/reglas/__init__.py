@@ -14,6 +14,7 @@ interesantes a mantener estado por su cuenta.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 
 from verifactu_lint.hallazgos import Hallazgo, Informe
 from verifactu_lint.registros import Evento, Registro
@@ -37,11 +38,39 @@ TODAS: tuple[Regla, ...] = (
 TODAS_EVENTOS: tuple[ReglaEvento, ...] = eventos.REGLAS
 
 
-def _informe(hallazgos: list[Hallazgo], analizados: int, fichero: str) -> Informe:
+def sella(
+    hallazgos: list[Hallazgo], fichero: str, lineas: dict[int, int | None]
+) -> list[Hallazgo]:
+    """Cada hallazgo, con su fichero y la línea del XML de su registro.
+
+    Se hace en un solo sitio para que ninguna regla tenga que acordarse; también lo
+    usan los hallazgos que no salen de `audita`, como los del histórico.
+    """
+    return [
+        replace(
+            h,
+            fichero=h.fichero or fichero,
+            linea_xml=(
+                h.linea_xml if h.linea_xml is not None
+                else lineas.get(h.orden) if h.orden is not None
+                else None
+            ),
+        )
+        for h in hallazgos
+    ]
+
+
+def _informe(
+    hallazgos: list[Hallazgo],
+    analizados: int,
+    fichero: str,
+    lineas: dict[int, int | None],
+) -> Informe:
+    sellados = sella(hallazgos, fichero, lineas)
     # El orden de los hallazgos es el de los registros, no el de las reglas: quien lee
     # el informe recorre su fichero de arriba abajo, no el catálogo de reglas.
-    hallazgos.sort(key=lambda h: (h.orden if h.orden is not None else -1, h.regla))
-    return Informe(hallazgos=hallazgos, registros_analizados=analizados, fichero=fichero)
+    sellados.sort(key=lambda h: (h.orden if h.orden is not None else -1, h.regla))
+    return Informe(hallazgos=sellados, registros_analizados=analizados, fichero=fichero)
 
 
 def audita(
@@ -53,7 +82,8 @@ def audita(
     hallazgos: list[Hallazgo] = []
     for regla in reglas:
         hallazgos.extend(regla(registros))
-    return _informe(hallazgos, len(registros), fichero)
+    lineas = {r.orden: r.linea_xml for r in registros}
+    return _informe(hallazgos, len(registros), fichero, lineas)
 
 
 def audita_eventos(
@@ -70,4 +100,5 @@ def audita_eventos(
     hallazgos: list[Hallazgo] = []
     for regla in reglas:
         hallazgos.extend(regla(eventos_))
-    return _informe(hallazgos, len(eventos_), fichero)
+    lineas = {e.orden: e.linea_xml for e in eventos_}
+    return _informe(hallazgos, len(eventos_), fichero, lineas)

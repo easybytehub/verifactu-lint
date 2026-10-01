@@ -91,7 +91,7 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
-      - uses: easybytehub/verifactu-lint@v0.3.0
+      - uses: easybytehub/verifactu-lint@v0.4.0
         with:
           ficheros: "registros/*.xml"
           fallar: "false"      # que no aborte antes de subir el informe
@@ -180,29 +180,30 @@ for hallazgo in informe.errores:
 |---|---|
 | `RRSIF001` | La huella declarada sale de los campos del registro |
 | `RRSIF002` | La huella tiene 64 caracteres hexadecimales en mayúsculas |
-| `RRSIF003` | Cada registro encadena con la huella del anterior |
-| `RRSIF004` | `PrimerRegistro` y `RegistroAnterior` son coherentes y hay un único inicio de cadena |
+| `RRSIF003` | Cada registro encadena con la huella del anterior del mismo obligado |
+| `RRSIF004` | `PrimerRegistro` y `RegistroAnterior` son coherentes y hay un único inicio de cadena por obligado |
 | `RRSIF005` | `TipoHuella` es `01` (SHA-256), el único que admite la lista L12 |
 | `RRSIF010` | No hay numeración de factura duplicada |
 | `RRSIF011` | El SIF se identifica con NIF + `IdSistemaInformatico` + `NumeroInstalacion` |
 | `RRSIF012` | `IndicadorMultiplesOT` es coherente con `TipoUsoPosibleMultiOT` |
-| `RRSIF013` | La cadena pertenece a un único obligado tributario |
+| `RRSIF013` | El fichero es de un único obligado tributario *(aviso; si hay varios, cada cadena se audita por separado)* |
+| `RRSIF014` | Una instalación ya vista no vuelve a arrancar su cadena *(con `--historico`)* |
 | `RRSIF030` | `TipoFactura` está entre los ocho de la lista L2 |
-| `RRSIF031` | Una rectificativa declara su modalidad y qué factura rectifica |
+| `RRSIF031` | Una rectificativa declara su modalidad y qué factura rectifica *(sin facturas identificadas es `incompleto`: un rappel no las lleva)* |
 | `RRSIF032` | Los campos de rectificación no aparecen en facturas normales |
 | `RRSIF033` | `ImporteRectificacion` va exactamente en las sustitutivas |
 | `RRSIF034` | Una F3 identifica las simplificadas a las que sustituye |
 | `RRSIF035` | `Subsanacion` y `RechazoPrevio` son válidos y no se confunden con rectificar |
 | `RRSIF040` | El registro de alta lleva desglose |
-| `RRSIF041` | `CuotaTotal` = Σ cuotas + Σ recargos *(error AEAT 2006)* |
-| `RRSIF042` | `ImporteTotal` = Σ bases + Σ cuotas + Σ recargos *(errores 1210 y 2005)* |
-| `RRSIF043` | La cuota de cada línea sale de su base y su tipo *(error 1142)* |
-| `RRSIF044` | Base y cuota de una línea llevan el mismo signo *(errores 1140 y 1143)* |
+| `RRSIF041` | `CuotaTotal` = Σ cuotas + Σ recargos, con el margen de ±10 € de la AEAT *(error admisible 2006)* |
+| `RRSIF042` | `ImporteTotal` = Σ bases + Σ cuotas + Σ recargos, ±10 € *(errores 2005 y 1210)* |
+| `RRSIF043` | En S1, la cuota de cada línea sale de su base (o su base a coste) y su tipo, ±10 € *(errores 1142, 1208 y 1209)* |
+| `RRSIF044` | En S1, base y cuota de una línea llevan el mismo signo *(errores 1140 y 1143)* |
 | `RRSIF045` | `Impuesto`, `ClaveRegimen`, calificación y exención existen |
-| `RRSIF046` | Lo exento, lo no sujeto y la inversión del sujeto pasivo no repercuten cuota |
+| `RRSIF046` | Sólo una línea S1 repercute cuota; en S2 el tipo y la cuota van a 0 *(errores 1198, 1207, 1237 y 1238)* |
 | `RRSIF047` | El recargo de equivalencia corresponde a su tipo *(errores 1160 y 1162-1170)* |
 | `RRSIF048` | `Macrodato` marca los importes de ±100.000.000 *(errores 1137-1139)* |
-| `RRSIF049` | F1, F3 y R1-R4 llevan destinatario *(error 1189)* |
+| `RRSIF049` | F1, F3 y R1-R4 llevan destinatario; F2 y R5, no *(errores 1189 y 1190)* |
 
 **Registros de evento** — es decir, la modalidad **NO VERI\*FACTU**:
 
@@ -256,7 +257,7 @@ reglamento que luego verifican.
 - **Orden HAC/1177/2024**, de 17 de octubre — especificaciones técnicas, funcionales y de contenido.
 - **AEAT — *Detalle de las especificaciones técnicas para generación de la huella o hash de los registros de facturación*, v0.1.2** (27/08/2024). Los tres vectores de su apartado 6 están en la suite de tests y se ejecutan en cada cambio: son la definición de correcto para el cálculo de la huella.
 - **AEAT — *Aclaraciones a dudas de los desarrolladores*, v1.3** (04/12/2025).
-- **AEAT — *Listado de códigos de error***. Las reglas que citan un código (1118, 1142, 1189, 2006…) comprueban exactamente lo que rechazaría el validador de la AEAT, y el hallazgo lo dice para que se pueda contrastar.
+- **AEAT — *Validaciones y errores*, v1.2.2** (08/04/2026), y su **listado de códigos de error**. Las reglas que citan un código (1118, 1142, 1189, 2006…) comprueban lo mismo que el validador de la AEAT, con sus márgenes y sus excepciones, y el hallazgo dice si ese código es un rechazo o un error admisible —el registro entra, pero hay que subsanarlo— para que se pueda contrastar.
 
 Cuando una regla y la norma discrepen, la norma tiene razón y la regla es un bug. [Abre un issue](https://github.com/easybytehub/verifactu-lint/issues) citando el apartado.
 
@@ -264,9 +265,9 @@ Cuando una regla y la norma discrepen, la norma tiene razón y la regla es un bu
 
 Cubre el encadenamiento, el formato de la huella y la identificación del SIF sobre registros de **alta** y **anulación**, y el encadenamiento, la firma y la coherencia de los registros de **evento**.
 
-Cada fichero se audita detectando qué contiene. Las dos cadenas —facturación y eventos— se auditan por separado porque son independientes: un evento no encadena con una factura ni al revés.
+Cada fichero se audita detectando qué contiene. Las dos cadenas —facturación y eventos— se auditan por separado porque son independientes: un evento no encadena con una factura ni al revés. Y la de facturación es una por obligado tributario: un SIF multi-OT que exporta varios obligados en el mismo fichero tiene varias cadenas, y cada una se comprueba por su lado.
 
-Todavía **no** cubre: los requisitos de conservación de la modalidad NO VERI\*FACTU que no se pueden observar desde un fichero de registros, ni el seguimiento del `NumeroInstalacion` entre ejecuciones. Están en los [issues](https://github.com/easybytehub/verifactu-lint/issues).
+Todavía **no** cubre los requisitos de conservación de la modalidad NO VERI\*FACTU que no se pueden observar desde un fichero de registros. Están en los [issues](https://github.com/easybytehub/verifactu-lint/issues).
 
 ## Contribuir
 
