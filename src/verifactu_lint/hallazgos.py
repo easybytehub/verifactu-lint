@@ -46,10 +46,21 @@ class Hallazgo:
     norma: str          # artículo o apartado concreto que se incumple
     referencia: str = ""  # qué registro, en términos localizables por el usuario
     orden: int | None = None  # posición 0-indexada, para herramientas
+    # De qué fichero sale y en qué línea del XML abre su registro. Los pone `audita`, no
+    # las reglas: una regla razona sobre registros y no tiene por qué saber de ficheros.
+    # Sin ellos, auditar `registros/*.xml` daba hallazgos que no decían de qué fichero
+    # eran, y un SARIF cuya ruta era «a.xml, b.xml».
+    fichero: str = ""
+    linea_xml: int | None = None
 
-    def linea(self) -> str:
-        """Una línea legible en terminal."""
-        donde = f" [{self.referencia}]" if self.referencia else ""
+    def linea(self, con_fichero: bool = False) -> str:
+        """Una línea legible en terminal.
+
+        `con_fichero` antepone el fichero a la referencia, para cuando el informe junta
+        varios y «#3 FA/2024/3» ya no basta para saber de dónde sale.
+        """
+        partes = [p for p in ((self.fichero if con_fichero else ""), self.referencia) if p]
+        donde = f" [{' · '.join(partes)}]" if partes else ""
         return f"{self.severidad.value.upper():10} {self.regla}{donde}: {self.titulo}"
 
 

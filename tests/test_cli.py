@@ -56,7 +56,10 @@ def test_un_fichero_util_entre_varios_sigue_auditando(tmp_path: Path) -> None:
 def test_estricto_convierte_avisos_en_fallo(tmp_path: Path) -> None:
     from test_desglose import escribe, factura, linea
 
-    ruta = escribe(tmp_path, factura([linea(calificacion="S2")]))
+    # Una cuota que se desvía 5 céntimos de base por tipo: la AEAT la admite (±10 €), así
+    # que es un aviso y sólo --estricto la convierte en fallo.
+    detalle = linea(base="100.00", tipo="21", cuota="21.05")
+    ruta = escribe(tmp_path, factura([detalle], cuota_total="21.05", importe_total="121.05"))
     assert main([str(ruta), "--sin-color"]) == 0
     assert main([str(ruta), "--sin-color", "--estricto"]) == 1
 
@@ -72,3 +75,60 @@ def test_todos_los_formatos_producen_salida(
         import json
 
         json.loads(salida)  # debe ser JSON válido
+
+
+def _ejecuta(argumentos: list[str], capsys: pytest.CaptureFixture[str]) -> str:
+    main(argumentos)
+    return capsys.readouterr().out
+
+
+def test_sarif_con_varios_ficheros_ubica_cada_hallazgo(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Cada resultado apunta a SU fichero y a la línea de SU registro.
+
+    Hasta 0.4.0 la URI era la lista de ficheros unida por comas —que no existe, y las
+    anotaciones del CI no aparecían— y la línea era el número de orden del registro.
+    """
+    import json
+
+    ficheros = [EJEMPLOS / "cadena-rota.xml", EJEMPLOS / "eventos-con-defectos.xml"]
+    sarif = json.loads(
+        _ejecuta([*map(str, ficheros), "--formato", "sarif", "--sin-color"], capsys)
+    )
+    resultados = sarif["runs"][0]["results"]
+    assert resultados
+    por_uri = {f.as_posix(): f for f in ficheros}
+    for resultado in resultados:
+        ubicacion = resultado["locations"][0]["physicalLocation"]
+        fichero = por_uri[ubicacion["artifactLocation"]["uri"]]
+        linea = fichero.read_text(encoding="utf-8").split("\n")[
+            ubicacion["region"]["startLine"] - 1
+        ]
+        assert "<" in linea and ("Registro" in linea or "Evento" in linea), linea
+    assert {r["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+            for r in resultados} == set(por_uri)
+
+
+def test_json_lleva_fichero_y_linea_por_hallazgo(capsys: pytest.CaptureFixture[str]) -> None:
+    import json
+
+    datos = json.loads(
+        _ejecuta([str(EJEMPLOS / "cadena-rota.xml"), "--formato", "json"], capsys)
+    )
+    assert datos["hallazgos"]
+    for h in datos["hallazgos"]:
+        assert h["fichero"].endswith("cadena-rota.xml")
+        assert isinstance(h["linea"], int)
+
+
+def test_texto_con_varios_ficheros_dice_de_cual_es_cada_hallazgo(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    salida = _ejecuta(
+        [str(EJEMPLOS / "cadena-rota.xml"), str(EJEMPLOS / "eventos-con-defectos.xml"),
+         "--sin-color"],
+        capsys,
+    )
+    assert "cadena-rota.xml · #" in salida
+    assert "eventos-con-defectos.xml · evento #" in salida

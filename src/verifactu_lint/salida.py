@@ -9,6 +9,7 @@ correr y una que avisa sola.
 from __future__ import annotations
 
 import json
+from pathlib import PurePath
 from typing import Any
 
 from verifactu_lint.hallazgos import Informe, Severidad
@@ -37,10 +38,12 @@ def texto(informe: Informe, color: bool = True) -> str:
     lineas.append(cabecera)
     lineas.append("")
 
+    # Con varios ficheros, la referencia sola («#3 FA/2024/3») ya no dice de dónde sale.
+    varios = len({h.fichero for h in informe.hallazgos if h.fichero}) > 1
     if not informe.hallazgos:
         lineas.append("Sin hallazgos.")
     for h in informe.hallazgos:
-        lineas.append(f"{tinte[h.severidad]}{h.linea()}{fin}")
+        lineas.append(f"{tinte[h.severidad]}{h.linea(con_fichero=varios)}{fin}")
         for detalle in h.detalle.splitlines():
             lineas.append(f"           {detalle}")
         lineas.append(f"{gris}           norma: {h.norma}{fin}")
@@ -84,11 +87,18 @@ def como_json(informe: Informe) -> str:
                 "norma": h.norma,
                 "referencia": h.referencia,
                 "orden": h.orden,
+                "fichero": h.fichero,
+                "linea": h.linea_xml,
             }
             for h in informe.hallazgos
         ],
     }
     return json.dumps(datos, ensure_ascii=False, indent=2)
+
+
+def _uri(fichero: str) -> str:
+    """Ruta en el formato de SARIF: barras normales, como las ve el repositorio."""
+    return PurePath(fichero).as_posix()
 
 
 def como_sarif(informe: Informe, version: str) -> str:
@@ -113,12 +123,21 @@ def como_sarif(informe: Informe, version: str) -> str:
                 "locations": [
                     {
                         "physicalLocation": {
-                            "artifactLocation": {"uri": informe.fichero or "registros.xml"},
-                            # SARIF exige una región y la unidad natural aquí es el
-                            # registro, no la línea del XML: un fichero puede venir en
-                            # una sola línea y la posición del registro sigue siendo
-                            # lo que el usuario reconoce.
-                            "region": {"startLine": (h.orden or 0) + 1},
+                            # La ruta es la del fichero del hallazgo. Hasta 0.4.0 era
+                            # `informe.fichero`, que con varios ficheros valía
+                            # «a.xml, b.xml»: una ruta que no existe, y GitHub no podía
+                            # anclar la alerta en ningún sitio.
+                            "artifactLocation": {
+                                "uri": _uri(h.fichero or informe.fichero or "registros.xml")
+                            },
+                            # La línea del XML donde abre el registro, si se sabe con
+                            # certeza; si no, la posición del registro, que es lo que
+                            # se usaba antes y lo que el usuario reconoce.
+                            "region": {
+                                "startLine": h.linea_xml
+                                if h.linea_xml is not None
+                                else (h.orden or 0) + 1
+                            },
                         }
                     }
                 ],

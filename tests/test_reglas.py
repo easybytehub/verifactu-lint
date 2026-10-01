@@ -233,6 +233,27 @@ class TestEncadenamiento:
         informe = audita(lee(ruta))
         assert "RRSIF004" in reglas_de(informe)
 
+    def test_dos_obligados_intercalados_son_dos_cadenas(self, tmp_path: Path) -> None:
+        """Un SIF multi-OT lleva una cadena por obligado (FAQ AEAT, trazabilidad).
+
+        Exportados juntos y en orden de emisión, los registros de los dos obligados se
+        intercalan. Cada cadena es perfecta; auditarlas como una sola inventaba una
+        rotura en cada salto de obligado y un «segundo primer registro».
+        """
+        ruta = escribe(tmp_path, envuelve(*_intercaladas(romper=None)))
+        informe = audita(lee(ruta))
+        assert "RRSIF003" not in reglas_de(informe)
+        assert "RRSIF004" not in reglas_de(informe)
+        assert [h.severidad for h in informe.hallazgos if h.regla == "RRSIF013"] == [
+            Severidad.AVISO
+        ]
+
+    def test_la_rotura_de_un_obligado_se_sigue_viendo(self, tmp_path: Path) -> None:
+        ruta = escribe(tmp_path, envuelve(*_intercaladas(romper="B/2")))
+        informe = audita(lee(ruta))
+        rotos = [h for h in informe.hallazgos if h.regla == "RRSIF003"]
+        assert len(rotos) == 1 and "B/2" in rotos[0].referencia
+
     def test_tramo_sin_inicio_declarado_es_incompleto_no_error(self, tmp_path: Path) -> None:
         """Un fichero puede ser un tramo legítimo de una cadena más larga."""
         h1 = huella_alta(NIF, "FA/1", "01-01-2024", "F1", "12.35", "123.45",
@@ -342,7 +363,82 @@ class TestIdentificacion:
         assert "RRSIF012" in reglas_de(informe)
 
 
+def _intercaladas(romper: str | None) -> list[str]:
+    """Dos obligados con su cadena cada uno, en orden de emisión: A1 B1 A2 B2 A3."""
+    otro = "B2185645K"
+    previas: dict[str, str | None] = {NIF: None, otro: None}
+    registros: list[str] = []
+    for i, (nif, num) in enumerate(
+        [(NIF, "A/1"), (otro, "B/1"), (NIF, "A/2"), (otro, "B/2"), (NIF, "A/3")]
+    ):
+        hora = f"2024-01-01T19:20:{30 + i:02d}+01:00"
+        anterior = "0" * 64 if num == romper else previas[nif]
+        h = huella_alta(nif, num, "01-01-2024", "F1", "12.35", "123.45", anterior, hora)
+        xml = alta_xml(num, h, anterior=anterior, hora=hora)
+        registros.append(
+            xml.replace(f"<IDEmisorFactura>{NIF}</IDEmisorFactura>",
+                        f"<IDEmisorFactura>{nif}</IDEmisorFactura>")
+        )
+        previas[nif] = h
+    return registros
+
+
 class TestLectura:
+    def test_iso_8859_1_declarado_se_lee_bien(self, tmp_path: Path) -> None:
+        """La huella va sobre UTF-8 del texto, se escriba el fichero como se escriba.
+
+        Hasta 0.4.0 el fichero se leía como texto en UTF-8 sin mirar la declaración: un
+        «Nº» en ISO-8859-1 llegaba como «N\ufffd» y la huella salía mal (RRSIF001).
+        """
+        num = "FA/Nº1"
+        h = huella_alta(NIF, num, "01-01-2024", "F1", "12.35", "123.45", None,
+                        "2024-01-01T19:20:30+01:00")
+        contenido = envuelve(alta_xml(num, h)).replace(
+            'encoding="UTF-8"', 'encoding="ISO-8859-1"'
+        )
+        ruta = tmp_path / "latin1.xml"
+        ruta.write_bytes(contenido.encode("latin-1"))
+        registros = lee(ruta)
+        assert registros[0].num_serie == num
+        assert "RRSIF001" not in reglas_de(audita(registros))
+
+    @pytest.mark.parametrize("declaracion", ['encoding="UTF-8"', ""])
+    def test_bytes_que_no_son_la_codificacion_declarada(
+        self, tmp_path: Path, declaracion: str
+    ) -> None:
+        """Un fichero en Windows-1252 que dice (o da a entender) ser UTF-8.
+
+        Es un fichero mal formado, pero el mensaje del parser —«not well-formed
+        (invalid token)»— no dice por qué. El de verifactu-lint, sí.
+        """
+        h = huella_alta(NIF, "FA/Nº1", "01-01-2024", "F1", "12.35", "123.45", None,
+                        "2024-01-01T19:20:30+01:00")
+        contenido = envuelve(alta_xml("FA/Nº1", h)).replace('encoding="UTF-8"', declaracion)
+        ruta = tmp_path / "mal.xml"
+        ruta.write_bytes(contenido.encode("cp1252"))
+        with pytest.raises(ErrorDeLectura, match="ISO-8859-1 o Windows-1252"):
+            lee(ruta)
+
+    def test_doctype_en_utf16_tambien_se_rechaza(self, tmp_path: Path) -> None:
+        """El prólogo se inspecciona en bytes: en UTF-16 «<!DOCTYPE» no es ASCII."""
+        bomba = (
+            '<?xml version="1.0" encoding="UTF-16"?>\n'
+            '<!DOCTYPE x [<!ENTITY a "aaaaaaaaaa">]><RegistroAlta>&a;</RegistroAlta>'
+        )
+        ruta = tmp_path / "utf16.xml"
+        ruta.write_bytes(bomba.encode("utf-16"))
+        with pytest.raises(ErrorDeLectura, match="DOCTYPE"):
+            lee(ruta)
+
+    def test_cada_registro_sabe_en_que_linea_empieza(self, tmp_path: Path) -> None:
+        contenido = envuelve(*cadena_valida(3))
+        ruta = escribe(tmp_path, contenido)
+        lineas = contenido.split("\n")
+        for r in lee(ruta):
+            assert r.linea_xml is not None
+            assert "<RegistroAlta>" in lineas[r.linea_xml - 1]
+            assert r.num_serie and r.num_serie in "\n".join(lineas[r.linea_xml - 1:r.linea_xml + 5])
+
     def test_xml_mal_formado(self, tmp_path: Path) -> None:
         ruta = escribe(tmp_path, "<RegistroAlta><sin cerrar>")
         with pytest.raises(ErrorDeLectura, match="mal formado"):

@@ -168,8 +168,37 @@ class TestCuadreDeTotales:
         assert "RRSIF042" not in reglas_de(informe)
 
     def test_tolera_el_redondeo_por_linea(self, tmp_path: Path) -> None:
-        """Un céntimo por línea es redondeo; un euro es un error."""
+        """Un céntimo por línea es redondeo, y de eso no se dice nada."""
         informe = audita(lee(escribe(tmp_path, factura([linea()], importe_total="121.01"))))
+        assert "RRSIF042" not in reglas_de(informe)
+
+    @pytest.mark.parametrize(
+        "importe,severidad",
+        [("125.00", Severidad.AVISO), ("131.00", Severidad.AVISO), ("131.01", Severidad.ERROR)],
+    )
+    def test_margen_de_diez_euros(
+        self, tmp_path: Path, importe: str, severidad: Severidad
+    ) -> None:
+        """La AEAT valida los totales con ±10 € y, aun fuera, acepta con error 2005.
+
+        Dentro del margen no lo va a marcar: aviso. Fuera, el registro entra con un
+        error admisible que hay que subsanar: error.
+        """
+        informe = audita(lee(escribe(tmp_path, factura([linea()], importe_total=importe))))
+        hallazgos = [h for h in informe.hallazgos if h.regla == "RRSIF042"]
+        assert [h.severidad for h in hallazgos] == [severidad]
+        if severidad is Severidad.ERROR:
+            assert "subsanar" in hallazgos[0].detalle
+            assert "rechaza" not in hallazgos[0].detalle
+
+    @pytest.mark.parametrize("regimen", ["03", "05", "06", "08", "09"])
+    def test_regimenes_sin_cuadre_de_totales(self, tmp_path: Path, regimen: str) -> None:
+        """En el REBU y compañía los totales no salen de las líneas por diseño (§16-17)."""
+        informe = audita(
+            lee(escribe(tmp_path, factura([linea(regimen=regimen)], cuota_total="40.00",
+                                          importe_total="500.00")))
+        )
+        assert "RRSIF041" not in reglas_de(informe)
         assert "RRSIF042" not in reglas_de(informe)
 
 
@@ -180,6 +209,71 @@ class TestCuadreDeLinea:
             lee(escribe(tmp_path, factura([detalle], cuota_total="15.00", importe_total="115.00")))
         )
         assert "RRSIF043" in reglas_de(informe)
+
+    def test_fuera_del_margen_es_rechazo(self, tmp_path: Path) -> None:
+        """Más de 10 € de desvío en la cuota de una línea: error 1142, rechazo."""
+        detalle = linea(base="1000.00", tipo="21", cuota="190.00")
+        informe = audita(
+            lee(escribe(tmp_path, factura([detalle], cuota_total="190.00",
+                                          importe_total="1190.00")))
+        )
+        hallazgos = [h for h in informe.hallazgos if h.regla == "RRSIF043"]
+        assert [h.severidad for h in hallazgos] == [Severidad.ERROR]
+        assert "1142" in hallazgos[0].norma
+
+    def test_redondeo_por_articulo_es_aviso(self, tmp_path: Path) -> None:
+        """Cinco céntimos de desvío: la AEAT lo admite (±10 €), así que no es un error."""
+        detalle = linea(base="100.00", tipo="21", cuota="21.05")
+        informe = audita(
+            lee(escribe(tmp_path, factura([detalle], cuota_total="21.05", importe_total="121.05")))
+        )
+        hallazgos = [h for h in informe.hallazgos if h.regla == "RRSIF043"]
+        assert [h.severidad for h in hallazgos] == [Severidad.AVISO]
+
+    def test_los_desvios_dentro_del_margen_se_agregan(self, tmp_path: Path) -> None:
+        """Redondear por artículo desvía casi todas las líneas: un aviso, no uno por línea."""
+        registros = [
+            factura([linea(cuota="21.03"), linea(cuota="21.02")], num=f"FA/{i}",
+                     cuota_total="42.05", importe_total="242.05")
+            for i in range(1, 4)
+        ]
+        informe = audita(lee(escribe(tmp_path, *registros)))
+        hallazgos = [h for h in informe.hallazgos if h.regla == "RRSIF043"]
+        assert len(hallazgos) == 1
+        assert hallazgos[0].severidad is Severidad.AVISO
+        assert "6 líneas de 3 registros" in hallazgos[0].titulo
+        assert "… y 1 más" in hallazgos[0].detalle
+
+    def test_base_a_coste_es_la_que_cuenta(self, tmp_path: Path) -> None:
+        """Con BaseImponibleACoste, la cuota sale de ella y no de la base (§15.7)."""
+        detalle = linea(base="100.00", base_a_coste="80.00", tipo="21", cuota="16.80")
+        informe = audita(
+            lee(escribe(tmp_path, factura([detalle], cuota_total="16.80", importe_total="116.80")))
+        )
+        assert "RRSIF043" not in reglas_de(informe)
+
+    @pytest.mark.parametrize("tipo_factura", ["R2", "R3"])
+    def test_r2_y_r3_no_se_cuadran(self, tmp_path: Path, tipo_factura: str) -> None:
+        """§15.7 exceptúa el cuadre y el signo de la cuota en R2 y R3."""
+        detalle = linea(base="-100.00", tipo="21", cuota="5.00")
+        registro = factura(
+            [detalle], cuota_total="5.00", importe_total="-95.00", tipo_factura=tipo_factura
+        ).replace(
+            f"<TipoFactura>{tipo_factura}</TipoFactura>",
+            f"<TipoFactura>{tipo_factura}</TipoFactura><TipoRectificativa>S</TipoRectificativa>",
+        )
+        informe = audita(lee(escribe(tmp_path, registro)))
+        assert "RRSIF043" not in reglas_de(informe)
+        assert "RRSIF044" not in reglas_de(informe)
+
+    def test_s1_sin_cuota(self, tmp_path: Path) -> None:
+        """En S1 tipo y cuota son obligatorios: error 1208."""
+        detalle = linea(cuota="")
+        informe = audita(
+            lee(escribe(tmp_path, factura([detalle], cuota_total="0.00", importe_total="100.00")))
+        )
+        hallazgos = [h for h in informe.hallazgos if h.regla == "RRSIF043"]
+        assert hallazgos and "1208" in hallazgos[0].norma
 
     def test_signos_distintos(self, tmp_path: Path) -> None:
         detalle = linea(base="-100.00", tipo="21", cuota="21.00")
@@ -218,14 +312,36 @@ class TestValoresDeLista:
 
 
 class TestExentasYNoSujetas:
-    def test_exenta_con_cuota_es_aviso(self, tmp_path: Path) -> None:
-        """No hay código de error para esto, así que no se afirma como incumplimiento."""
+    def test_exenta_con_cuota_es_error(self, tmp_path: Path) -> None:
+        """Lo exento no informa tipo ni cuota: error 1238 del listado de la AEAT."""
         detalle = linea(exenta="E1", tipo="", cuota="21.00", base="100.00")
         informe = audita(
             lee(escribe(tmp_path, factura([detalle], cuota_total="21.00", importe_total="121.00")))
         )
         hallazgos = [h for h in informe.hallazgos if h.regla == "RRSIF046"]
-        assert hallazgos and all(h.severidad is Severidad.AVISO for h in hallazgos)
+        assert hallazgos and all(h.severidad is Severidad.ERROR for h in hallazgos)
+        assert "1238" in hallazgos[0].norma
+
+    def test_exenta_con_tipo_y_sin_cuota(self, tmp_path: Path) -> None:
+        """Tampoco el tipo: una exenta con TipoImpositivo es el mismo 1238."""
+        detalle = linea(exenta="E1", tipo="21", cuota="")
+        informe = audita(
+            lee(escribe(tmp_path, factura([detalle], cuota_total="0.00", importe_total="100.00")))
+        )
+        assert "RRSIF046" in reglas_de(informe)
+
+    def test_no_sujeta_con_iva_y_cuota(self, tmp_path: Path) -> None:
+        detalle = linea(calificacion="N1", tipo="21", cuota="21.00")
+        informe = audita(lee(escribe(tmp_path, factura([detalle]))))
+        hallazgos = [h for h in informe.hallazgos if h.regla == "RRSIF046"]
+        assert hallazgos and "1237" in hallazgos[0].norma
+
+    def test_no_sujeta_sin_tipo_ni_cuota_es_correcta(self, tmp_path: Path) -> None:
+        detalle = linea(calificacion="N1", tipo="", cuota="")
+        informe = audita(
+            lee(escribe(tmp_path, factura([detalle], cuota_total="0.00", importe_total="100.00")))
+        )
+        assert informe.hallazgos == []
 
     def test_exenta_sin_cuota_es_correcta(self, tmp_path: Path) -> None:
         detalle = linea(exenta="E1", tipo="", cuota="")
@@ -235,10 +351,30 @@ class TestExentasYNoSujetas:
         assert "RRSIF046" not in reglas_de(informe)
 
     def test_inversion_del_sujeto_pasivo_con_cuota(self, tmp_path: Path) -> None:
-        """En S2 repercute el destinatario, no el emisor."""
+        """En S2 repercute el destinatario, no el emisor (error 1198)."""
         detalle = linea(calificacion="S2")
         informe = audita(lee(escribe(tmp_path, factura([detalle]))))
+        hallazgos = [h for h in informe.hallazgos if h.regla == "RRSIF046"]
+        assert hallazgos and "1198" in hallazgos[0].norma
+
+    def test_inversion_del_sujeto_pasivo_con_tipo_y_cuota_cero(self, tmp_path: Path) -> None:
+        """S2 lleva el tipo a 0, no el 21 de la operación: también es 1198.
+
+        Y no es un descuadre de cuota (RRSIF043): el 1142 sólo se aplica a S1.
+        """
+        detalle = linea(calificacion="S2", tipo="21", cuota="0.00")
+        informe = audita(
+            lee(escribe(tmp_path, factura([detalle], cuota_total="0.00", importe_total="100.00")))
+        )
         assert "RRSIF046" in reglas_de(informe)
+        assert "RRSIF043" not in reglas_de(informe)
+
+    def test_inversion_del_sujeto_pasivo_bien_informada(self, tmp_path: Path) -> None:
+        detalle = linea(calificacion="S2", tipo="0", cuota="0.00")
+        informe = audita(
+            lee(escribe(tmp_path, factura([detalle], cuota_total="0.00", importe_total="100.00")))
+        )
+        assert informe.hallazgos == []
 
 
 class TestRecargoDeEquivalencia:
@@ -308,6 +444,15 @@ class TestDestinatario:
             lee(escribe(tmp_path, factura([linea()], tipo_factura=tipo, destinatario=False)))
         )
         assert "RRSIF049" not in reglas_de(informe)
+
+    @pytest.mark.parametrize("tipo", ["F2", "R5"])
+    def test_simplificadas_no_lo_admiten(self, tmp_path: Path, tipo: str) -> None:
+        """Error 1190: una F2 o R5 con `Destinatarios` se rechaza."""
+        informe = audita(
+            lee(escribe(tmp_path, factura([linea()], tipo_factura=tipo, destinatario=True)))
+        )
+        hallazgos = [h for h in informe.hallazgos if h.regla == "RRSIF049"]
+        assert hallazgos and "1190" in hallazgos[0].norma
 
 
 class TestSinDesglose:

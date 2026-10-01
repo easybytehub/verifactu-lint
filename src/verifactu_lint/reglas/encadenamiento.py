@@ -28,6 +28,25 @@ FORMATO_HUELLA = re.compile(r"^[0-9A-F]{64}$")
 NORMA_HUELLA = "Orden HAC/1177/2024, art. 13 y especificaciones técnicas de la huella"
 
 
+def _por_obligado(registros: list[Registro]) -> list[list[Registro]]:
+    """Los registros agrupados por emisor, cada grupo en su orden del fichero.
+
+    **Una cadena por obligado tributario, no una por fichero.** Lo dice la AEAT en sus
+    preguntas frecuentes sobre trazabilidad: «Un SIF tiene una única cadena de RF (por
+    cada obligado tributario que gestione, en el caso de que gestione varios dentro de
+    él)». Hasta 0.4.0 el fichero se auditaba como una sola cadena, y un SIF multi-OT que
+    exportara dos obligados intercalados —cada uno con su cadena perfecta— recibía
+    errores de cadena rota y de «más de un primer registro» que no existían.
+
+    Se agrupa sólo por emisor, no por número de instalación: si una cadena cambia de
+    instalación a mitad, partirla por ahí escondería justo la rotura que hay que ver.
+    """
+    grupos: dict[str, list[Registro]] = {}
+    for r in registros:
+        grupos.setdefault((r.id_emisor or "").strip(), []).append(r)
+    return list(grupos.values())
+
+
 def _huellas_admisibles(registro: Registro) -> list[str]:
     """Todas las huellas que serían correctas para este registro.
 
@@ -166,7 +185,14 @@ def formato_de_huella(registros: list[Registro]) -> list[Hallazgo]:
 
 
 def cadena_continua(registros: list[Registro]) -> list[Hallazgo]:
-    """RRSIF003 — cada registro encadena con la huella del anterior."""
+    """RRSIF003 — cada registro encadena con la huella del anterior del mismo obligado."""
+    hallazgos: list[Hallazgo] = []
+    for cadena in _por_obligado(registros):
+        hallazgos.extend(_cadena_continua(cadena))
+    return hallazgos
+
+
+def _cadena_continua(registros: list[Registro]) -> list[Hallazgo]:
     hallazgos: list[Hallazgo] = []
     for previo, actual in pairwise(registros):
         declarada_anterior = (actual.anterior_huella or "").strip().upper()
@@ -230,7 +256,14 @@ def cadena_continua(registros: list[Registro]) -> list[Hallazgo]:
 
 
 def primer_registro_coherente(registros: list[Registro]) -> list[Hallazgo]:
-    """RRSIF004 — `PrimerRegistro` y `RegistroAnterior` son excluyentes, y sólo uno."""
+    """RRSIF004 — `PrimerRegistro` y `RegistroAnterior` son excluyentes, y sólo uno por obligado."""
+    hallazgos: list[Hallazgo] = []
+    for cadena in _por_obligado(registros):
+        hallazgos.extend(_primer_registro_coherente(cadena))
+    return hallazgos
+
+
+def _primer_registro_coherente(registros: list[Registro]) -> list[Hallazgo]:
     hallazgos: list[Hallazgo] = []
     primeros = [r for r in registros if r.es_primer_registro]
 

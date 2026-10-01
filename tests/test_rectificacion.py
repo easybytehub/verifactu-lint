@@ -38,6 +38,13 @@ def factura(
     rechazo: str | None = None,
 ) -> str:
     h = huella_alta(NIF, num, "01-01-2024", tipo, "12.35", "123.45", None, HORA)
+    # F2 y R5 no llevan Destinatarios (error 1190); el resto, sí (1189).
+    destinatarios = (
+        ""
+        if tipo in {"F2", "R5"}
+        else "<Destinatarios><IDDestinatario><NombreRazon>Cliente SL</NombreRazon>"
+        "<NIF>12345678Z</NIF></IDDestinatario></Destinatarios>"
+    )
     bloques = ""
     if subsanacion:
         bloques += f"<Subsanacion>{subsanacion}</Subsanacion>"
@@ -80,9 +87,7 @@ def factura(
       <NombreRazonEmisor>Ejemplo SL</NombreRazonEmisor>
       {bloques}
       <TipoFactura>{tipo}</TipoFactura>
-      <Destinatarios>
-        <IDDestinatario><NombreRazon>Cliente SL</NombreRazon><NIF>12345678Z</NIF></IDDestinatario>
-      </Destinatarios>
+      {destinatarios}
       <Desglose>
         <DetalleDesglose>
           <ClaveRegimen>01</ClaveRegimen>
@@ -158,10 +163,16 @@ class TestRectificativas:
         )
         assert "RRSIF031" in reglas_de(informe)
 
-    def test_rectificativa_sin_factura_rectificada(self, tmp_path: Path) -> None:
+    def test_rectificativa_sin_factura_rectificada_es_incompleto(self, tmp_path: Path) -> None:
+        """Un rappel rectifica un periodo, no facturas concretas (FAQ AEAT, ap. 19).
+
+        `FacturasRectificadas` «no es obligatoria» (Validaciones AEAT, §4) y no hay
+        código de rechazo para su ausencia: no se puede afirmar el incumplimiento.
+        """
         informe = audita(lee(escribe(tmp_path, factura("R1", rectificativa="I"))))
-        errores = [h for h in informe.hallazgos if h.regla == "RRSIF031"]
-        assert any(h.severidad is Severidad.ERROR for h in errores)
+        hallazgos = [h for h in informe.hallazgos if h.regla == "RRSIF031"]
+        assert hallazgos and all(h.severidad is Severidad.INCOMPLETO for h in hallazgos)
+        assert "rappel" in hallazgos[0].detalle
 
     def test_r5_sin_rectificadas_es_incompleto_no_error(self, tmp_path: Path) -> None:
         """R5 rectifica simplificadas, que pueden no ser identificables una a una."""

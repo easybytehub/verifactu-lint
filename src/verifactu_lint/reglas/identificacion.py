@@ -220,7 +220,8 @@ def emisor_consistente(registros: list[Registro]) -> list[Hallazgo]:
                 f"NIF emisores encontrados: {', '.join(sorted(emisores))}.\n"
                 "La cadena de huellas de un SIF pertenece a un obligado tributario. Si esto "
                 "es una gestoría o un SaaS multi-OT, cada obligado necesita su propia cadena "
-                "y su propio número de instalación."
+                "y su propio número de instalación. Las reglas de encadenamiento (RRSIF003 y "
+                "RRSIF004) ya auditan por separado la cadena de cada emisor."
             ),
             norma=NORMA_ID,
             referencia=registros[0].referencia if registros else "",

@@ -17,7 +17,7 @@ from verifactu_lint import __version__
 from verifactu_lint import historico as hist
 from verifactu_lint.hallazgos import Hallazgo, Informe
 from verifactu_lint.registros import ErrorDeLectura, lee, lee_eventos
-from verifactu_lint.reglas import audita, audita_eventos
+from verifactu_lint.reglas import audita, audita_eventos, sella
 from verifactu_lint.salida import como_json, como_sarif, texto
 
 EPILOGO = """\
@@ -119,9 +119,10 @@ def main(argv: list[str] | None = None) -> int:
             sin_registros.append(str(ruta))
             continue
 
-        # Cada fichero se audita como su propia cadena, y dentro de él la de
-        # facturación y la de eventos por separado: son independientes, y mezclarlas
-        # produciría roturas de encadenamiento inventadas.
+        # Cada fichero se audita por separado, y dentro de él la cadena de facturación
+        # y la de eventos también: son independientes, y mezclarlas produciría roturas
+        # de encadenamiento inventadas. (La de facturación, además, es una por obligado
+        # tributario: eso lo resuelven las propias reglas de encadenamiento.)
         for informe_parcial in (
             audita(registros, fichero=str(ruta)) if registros else None,
             audita_eventos(eventos, fichero=str(ruta)) if eventos else None,
@@ -133,7 +134,9 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.historico is not None and registros:
             del_historico, estado = hist.comprueba(registros, estado, fichero=str(ruta))
-            hallazgos.extend(del_historico)
+            hallazgos.extend(
+                sella(del_historico, str(ruta), {r.orden: r.linea_xml for r in registros})
+            )
 
         ficheros_leidos.append(str(ruta))
 
