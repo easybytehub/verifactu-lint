@@ -10,6 +10,8 @@
 
 Le pasas el XML que produce tu código y te dice dónde incumple, citando el artículo o el código de error de la AEAT.
 
+**Pruébalo sin instalar nada:** el [validador de registros Verifactu](https://easybyte.es/herramientas/validador-registros-verifactu/) ejecuta este mismo paquete en tu navegador, con Pyodide, y el XML no sale de tu equipo. Para tenerlo en tu CI, sigue leyendo.
+
 ```console
 $ verifactu-lint registros-generados.xml
 
