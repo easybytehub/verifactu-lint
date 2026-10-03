@@ -64,6 +64,22 @@ class DetalleDesglose:
 
 
 @dataclass(frozen=True)
+class ElementoInesperado:
+    """Un elemento en una posición que el esquema no prevé.
+
+    `ruta` va desde el propio registro («RegistroAlta/Huella/Hash»), que es como lo
+    busca quien abre el fichero. `contiene` son los elementos que el esquema espera en
+    el bloque padre y que aparecen dentro de éste: es la pista que convierte «no
+    informa TipoFactura» en «TipoFactura está, pero dentro de Factura».
+    """
+
+    ruta: str
+    contiene: tuple[str, ...] = ()
+    # El padre es un elemento de valor (`Huella`, `CuotaTotal`…), que no admite hijos.
+    en_un_valor: bool = False
+
+
+@dataclass(frozen=True)
 class Registro:
     """Un registro de facturación, de alta o de anulación.
 
@@ -103,6 +119,10 @@ class Registro:
     # Línea del XML donde abre el registro, cuando se puede saber con certeza. La usa la
     # salida SARIF para que la anotación del CI caiga en el registro y no en la línea N.
     linea_xml: int | None = None
+    # Elementos en posiciones que el esquema no prevé, desde 0.4.1. El parseo sigue
+    # siendo tolerante —el registro entra igual—, pero un dato escrito en otra ruta
+    # cuenta como ausente para las reglas, y esto es lo que permite decir por qué.
+    fuera_de_esquema: tuple[ElementoInesperado, ...] = ()
 
     @property
     def es_rectificativa(self) -> bool:
@@ -229,6 +249,126 @@ def _lee_encadenamiento(nodo: ET.Element) -> tuple[ET.Element | None, ET.Element
     return encadenamiento, _hijo(encadenamiento, "RegistroAnterior")
 
 
+# Qué hijos admite cada bloque, copiado de `SuministroInformacion.xsd`
+# (`RegistroFacturacionAltaType`, `RegistroFacturacionAnulacionType` y los tipos que
+# cuelgan de ellos). `tests/test_estructura.py` lo contrasta con el XSD versionado en
+# `esquemas/`, así que no puede divergir sin que falle la suite.
+#
+# **Sólo los bloques que leen las reglas.** Esto no es una validación XSD —el paquete
+# no la hace, y no comprueba orden ni obligatoriedad—: existe para explicar por qué
+# una regla no encuentra un dato que sí está, sólo que en otra ruta. Un bloque que
+# ninguna regla lee (`Destinatarios` por dentro, `Tercero`, la firma) no puede
+# provocar ese engaño, y comprobarlo sería hacer de XSD a medias.
+_HIJOS_DEL_REGISTRO: dict[str, frozenset[str]] = {
+    "RegistroAlta": frozenset({
+        "IDVersion", "IDFactura", "RefExterna", "NombreRazonEmisor", "Subsanacion",
+        "RechazoPrevio", "TipoFactura", "TipoRectificativa", "FacturasRectificadas",
+        "FacturasSustituidas", "ImporteRectificacion", "FechaOperacion",
+        "DescripcionOperacion", "FacturaSimplificadaArt7273",
+        "FacturaSinIdentifDestinatarioArt61d", "Macrodato",
+        "EmitidaPorTerceroODestinatario", "Tercero", "Destinatarios", "Cupon",
+        "Desglose", "CuotaTotal", "ImporteTotal", "Encadenamiento",
+        "SistemaInformatico", "FechaHoraHusoGenRegistro",
+        "NumRegistroAcuerdoFacturacion", "IdAcuerdoSistemaInformatico", "TipoHuella",
+        "Huella", "Signature",
+    }),
+    "RegistroAnulacion": frozenset({
+        "IDVersion", "IDFactura", "RefExterna", "SinRegistroPrevio", "RechazoPrevio",
+        "GeneradoPor", "Generador", "Encadenamiento", "SistemaInformatico",
+        "FechaHoraHusoGenRegistro", "TipoHuella", "Huella", "Signature",
+    }),
+}
+
+# `IDFactura` cambia de nombres según el tipo de registro: en la anulación cada campo
+# lleva el sufijo «Anulada». Confundirlos es un error real (estudio S1, I-3).
+ID_FACTURA: dict[str, tuple[str, str, str]] = {
+    "RegistroAlta": ("IDEmisorFactura", "NumSerieFactura", "FechaExpedicionFactura"),
+    "RegistroAnulacion": (
+        "IDEmisorFacturaAnulada",
+        "NumSerieFacturaAnulada",
+        "FechaExpedicionFacturaAnulada",
+    ),
+}
+
+_HIJOS_DEL_BLOQUE: dict[str, frozenset[str]] = {
+    "Encadenamiento": frozenset({"PrimerRegistro", "RegistroAnterior"}),
+    "RegistroAnterior": frozenset({
+        "IDEmisorFactura", "NumSerieFactura", "FechaExpedicionFactura", "Huella",
+    }),
+    "Desglose": frozenset({"DetalleDesglose"}),
+    "DetalleDesglose": frozenset({
+        "Impuesto", "ClaveRegimen", "CalificacionOperacion", "OperacionExenta",
+        "TipoImpositivo", "BaseImponibleOimporteNoSujeto", "BaseImponibleACoste",
+        "CuotaRepercutida", "TipoRecargoEquivalencia", "CuotaRecargoEquivalencia",
+    }),
+    "SistemaInformatico": frozenset({
+        "NombreRazon", "NIF", "IDOtro", "NombreSistemaInformatico",
+        "IdSistemaInformatico", "Version", "NumeroInstalacion",
+        "TipoUsoPosibleSoloVerifactu", "TipoUsoPosibleMultiOT", "IndicadorMultiplesOT",
+    }),
+}
+
+# Elementos de tipo simple: llevan un valor, nunca otros elementos. Un
+# `<Huella><Hash>…</Hash></Huella>` se lee como una huella vacía, y avisar sólo de
+# eso manda a buscar un dato que está ahí.
+_DE_VALOR = frozenset({
+    "IDVersion", "RefExterna", "NombreRazonEmisor", "Subsanacion", "RechazoPrevio",
+    "TipoFactura", "TipoRectificativa", "FechaOperacion", "DescripcionOperacion",
+    "FacturaSimplificadaArt7273", "FacturaSinIdentifDestinatarioArt61d", "Macrodato",
+    "EmitidaPorTerceroODestinatario", "Cupon", "CuotaTotal", "ImporteTotal",
+    "FechaHoraHusoGenRegistro", "NumRegistroAcuerdoFacturacion",
+    "IdAcuerdoSistemaInformatico", "TipoHuella", "Huella", "SinRegistroPrevio",
+    "GeneradoPor", "PrimerRegistro", "IDEmisorFactura", "NumSerieFactura",
+    "FechaExpedicionFactura", "IDEmisorFacturaAnulada", "NumSerieFacturaAnulada",
+    "FechaExpedicionFacturaAnulada", "Impuesto", "ClaveRegimen",
+    "CalificacionOperacion", "OperacionExenta", "TipoImpositivo",
+    "BaseImponibleOimporteNoSujeto", "BaseImponibleACoste", "CuotaRepercutida",
+    "TipoRecargoEquivalencia", "CuotaRecargoEquivalencia", "NombreRazon", "NIF",
+    "NombreSistemaInformatico", "IdSistemaInformatico", "Version", "NumeroInstalacion",
+    "TipoUsoPosibleSoloVerifactu", "TipoUsoPosibleMultiOT", "IndicadorMultiplesOT",
+})
+
+
+def _inesperado(nodo: ET.Element, ruta: str, esperados: frozenset[str]) -> ElementoInesperado:
+    """El elemento fuera de sitio, con los esperados del bloque padre que lleva dentro."""
+    dentro: list[str] = []
+    for descendiente in nodo.iter():
+        nombre = _local(descendiente.tag)
+        if descendiente is not nodo and nombre in esperados and nombre not in dentro:
+            dentro.append(nombre)
+    return ElementoInesperado(ruta=ruta, contiene=tuple(dentro))
+
+
+def _fuera_de_esquema(nodo: ET.Element) -> tuple[ElementoInesperado, ...]:
+    """Los elementos de un registro que están donde el esquema no los prevé."""
+    raiz = _local(nodo.tag)
+    hallados: list[ElementoInesperado] = []
+
+    def recorre(padre: ET.Element, ruta: str, esperados: frozenset[str]) -> None:
+        for hijo in padre:
+            if not isinstance(hijo.tag, str):
+                continue  # comentarios e instrucciones de proceso
+            nombre = _local(hijo.tag)
+            ruta_hijo = f"{ruta}/{nombre}"
+            if nombre not in esperados:
+                hallados.append(_inesperado(hijo, ruta_hijo, esperados))
+            elif nombre == "IDFactura" and padre is nodo:
+                recorre(hijo, ruta_hijo, frozenset(ID_FACTURA[raiz]))
+            elif nombre in _HIJOS_DEL_BLOQUE:
+                recorre(hijo, ruta_hijo, _HIJOS_DEL_BLOQUE[nombre])
+            elif nombre in _DE_VALOR:
+                for nieto in hijo:
+                    if isinstance(nieto.tag, str):
+                        hallados.append(
+                            ElementoInesperado(
+                                ruta=f"{ruta_hijo}/{_local(nieto.tag)}", en_un_valor=True
+                            )
+                        )
+
+    recorre(nodo, raiz, _HIJOS_DEL_REGISTRO[raiz])
+    return tuple(hallados)
+
+
 def _lee_alta(nodo: ET.Element, orden: int) -> Registro:
     encadenamiento, anterior = _lee_encadenamiento(nodo)
     return Registro(
@@ -266,6 +406,7 @@ def _lee_alta(nodo: ET.Element, orden: int) -> Registro:
         destinatarios=_cuenta(nodo, "Destinatarios", "IDDestinatario"),
         desglose=_lee_desglose(_hijo(nodo, "Desglose")),
         sistema=_lee_sistema(_hijo(nodo, "SistemaInformatico")),
+        fuera_de_esquema=_fuera_de_esquema(nodo),
     )
 
 
@@ -336,6 +477,7 @@ def _lee_anulacion(nodo: ET.Element, orden: int) -> Registro:
         ),
         anterior_huella=_valor(anterior, "Huella") if anterior is not None else None,
         sistema=_lee_sistema(_hijo(nodo, "SistemaInformatico")),
+        fuera_de_esquema=_fuera_de_esquema(nodo),
     )
 
 

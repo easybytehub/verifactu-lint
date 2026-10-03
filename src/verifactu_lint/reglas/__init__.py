@@ -21,6 +21,7 @@ from verifactu_lint.registros import Evento, Registro
 from verifactu_lint.reglas import (
     desglose,
     encadenamiento,
+    estructura,
     eventos,
     identificacion,
     rectificacion,
@@ -30,6 +31,7 @@ Regla = Callable[[list[Registro]], list[Hallazgo]]
 ReglaEvento = Callable[[list[Evento]], list[Hallazgo]]
 
 TODAS: tuple[Regla, ...] = (
+    *estructura.REGLAS,
     *encadenamiento.REGLAS,
     *identificacion.REGLAS,
     *rectificacion.REGLAS,
@@ -69,7 +71,18 @@ def _informe(
     sellados = sella(hallazgos, fichero, lineas)
     # El orden de los hallazgos es el de los registros, no el de las reglas: quien lee
     # el informe recorre su fichero de arriba abajo, no el catálogo de reglas.
-    sellados.sort(key=lambda h: (h.orden if h.orden is not None else -1, h.regla))
+    #
+    # **Con una excepción, desde 0.4.1: las causas raíz van primero.** Un registro que no
+    # sigue el esquema produce una cascada de hallazgos que sólo se entienden después
+    # de leer el de la estructura; ponerlo en su sitio cronológico obligaría a leer las
+    # consecuencias antes que la causa.
+    sellados.sort(
+        key=lambda h: (
+            h.regla not in estructura.CAUSAS_RAIZ,
+            h.orden if h.orden is not None else -1,
+            h.regla,
+        )
+    )
     return Informe(hallazgos=sellados, registros_analizados=analizados, fichero=fichero)
 
 
@@ -82,6 +95,7 @@ def audita(
     hallazgos: list[Hallazgo] = []
     for regla in reglas:
         hallazgos.extend(regla(registros))
+    hallazgos = estructura.anota_cascada(hallazgos, registros)
     lineas = {r.orden: r.linea_xml for r in registros}
     return _informe(hallazgos, len(registros), fichero, lineas)
 

@@ -365,10 +365,22 @@ def ciclo_no_verifactu(eventos: list[Evento]) -> list[Hallazgo]:
 
     Un `02` (fin) sin un `01` (inicio) previo, o dos inicios seguidos sin fin, señalan
     eventos perdidos: exactamente lo que el registro existe para hacer detectable.
+
+    **Un fin sin inicio sólo es un aviso si el inicio tendría que estar en el
+    fichero**: porque contiene el origen de la cadena (un evento con
+    `PrimerEvento=S`) o porque antes del fin ya hubo otro 01 o 02, y entonces el 01 que
+    abre este periodo iría entre ellos. Si no, el inicio puede estar en un fichero
+    anterior y aquí no se puede determinar: es `INCOMPLETO`, como RRSIF028 en el mismo
+    caso. Hasta 0.4.0 era siempre `AVISO`, y el estudio S1 lo encontró en un fichero de
+    un solo evento cuyo `EventoAnterior` era, precisamente, un `01` (incidencia I-5).
     """
     hallazgos: list[Hallazgo] = []
     abierto = False
+    # ¿Tendría que estar en este fichero el 01 que abre el periodo? Sí si el fichero
+    # contiene el origen de la cadena o un 01/02 anterior; si no, puede estar en otro.
+    inicio_en_el_fichero = False
     for e in eventos:
+        inicio_en_el_fichero = inicio_en_el_fichero or e.es_primer_evento
         tipo = (e.tipo_evento or "").strip()
         if tipo == "01":
             if abierto:
@@ -387,16 +399,35 @@ def ciclo_no_verifactu(eventos: list[Evento]) -> list[Hallazgo]:
                     )
                 )
             abierto = True
+            inicio_en_el_fichero = True
         elif tipo == "02":
-            if not abierto:
+            if not abierto and inicio_en_el_fichero:
                 hallazgos.append(
                     Hallazgo(
                         regla="RRSIF027",
                         severidad=Severidad.AVISO,
                         titulo="Fin como NO VERI*FACTU sin inicio previo",
                         detalle=(
-                            "Puede ser correcto si el inicio está en un fichero anterior; "
-                            "si no, falta el evento 01."
+                            "El evento 01 que abre este periodo tendría que estar en el "
+                            "fichero —contiene el origen de la cadena o un 01/02 anterior— "
+                            "y no está: falta, o se perdió por el camino."
+                        ),
+                        norma=NORMA_EVENTOS,
+                        referencia=e.referencia,
+                        orden=e.orden,
+                    )
+                )
+            elif not abierto:
+                hallazgos.append(
+                    Hallazgo(
+                        regla="RRSIF027",
+                        severidad=Severidad.INCOMPLETO,
+                        titulo="Fin como NO VERI*FACTU sin inicio en este fichero",
+                        detalle=(
+                            "El fichero no contiene el origen de la cadena de eventos "
+                            "(PrimerEvento=S) ni otro 01 o 02 antes de este fin, así que "
+                            "el evento 01 que lo abre puede estar en un fichero anterior. "
+                            "Hay que comprobarlo contra los eventos que preceden a éste."
                         ),
                         norma=NORMA_EVENTOS,
                         referencia=e.referencia,
@@ -404,6 +435,7 @@ def ciclo_no_verifactu(eventos: list[Evento]) -> list[Hallazgo]:
                     )
                 )
             abierto = False
+            inicio_en_el_fichero = True
     return hallazgos
 
 

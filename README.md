@@ -91,7 +91,7 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
-      - uses: easybytehub/verifactu-lint@v0.4.0
+      - uses: easybytehub/verifactu-lint@v0.4.1
         with:
           ficheros: "registros/*.xml"
           fallar: "false"      # que no aborte antes de subir el informe
@@ -178,7 +178,7 @@ for hallazgo in informe.errores:
 
 | Regla | Comprueba |
 |---|---|
-| `RRSIF001` | La huella declarada sale de los campos del registro |
+| `RRSIF001` | La huella declarada sale de los campos del registro *(la «Calculada» es la de los importes tal como están escritos, con la cadena que la produce)* |
 | `RRSIF002` | La huella tiene 64 caracteres hexadecimales en mayúsculas |
 | `RRSIF003` | Cada registro encadena con la huella del anterior del mismo obligado |
 | `RRSIF004` | `PrimerRegistro` y `RegistroAnterior` son coherentes y hay un único inicio de cadena por obligado |
@@ -204,6 +204,17 @@ for hallazgo in informe.errores:
 | `RRSIF047` | El recargo de equivalencia corresponde a su tipo *(errores 1160 y 1162-1170)* |
 | `RRSIF048` | `Macrodato` marca los importes de ±100.000.000 *(errores 1137-1139)* |
 | `RRSIF049` | F1, F3 y R1-R4 llevan destinatario; F2 y R5, no *(errores 1189 y 1190)* |
+| `RRSIF050` | Los elementos del registro están donde el esquema los prevé *(un solo hallazgo, el primero del informe)* |
+| `RRSIF051` | La anulación identifica la factura con sus tres campos `…Anulada`, y dice si se usaron los nombres del alta |
+| `RRSIF052` | Las fechas de expedición van en `dd-mm-aaaa` |
+| `RRSIF053` | `FechaHoraHusoGenRegistro` lleva huso horario, como exige el art. 7.g de la orden *(con fracciones de segundo, aviso)* |
+
+**Cuando el registro no sigue el esquema**, las demás reglas no encuentran los datos
+que están en otra ruta, y dirían «no informa TipoFactura» de un `TipoFactura` metido
+en un `<Factura>` inventado. Por eso `RRSIF050` nombra las rutas inesperadas —y qué
+llevan dentro— antes que nada, y los hallazgos de esos registros que pueden ser
+consecuencia de ello llevan una nota. Se anotan, no se suprimen: un elemento de más no
+debe esconder una cadena rota de verdad.
 
 **Registros de evento** — es decir, la modalidad **NO VERI\*FACTU**:
 
@@ -216,7 +227,7 @@ for hallazgo in informe.errores:
 | `RRSIF024` | `PrimerEvento` y `EventoAnterior` son excluyentes, y hay un único origen |
 | `RRSIF025` | Todo registro de evento lleva firma electrónica |
 | `RRSIF026` | `DatosPropiosEvento` corresponde al tipo de evento |
-| `RRSIF027` | Los arranques y paradas como NO VERI\*FACTU se emparejan |
+| `RRSIF027` | Los arranques y paradas como NO VERI\*FACTU se emparejan *(un fin sin el origen de la cadena en el fichero es `incompleto`: el inicio puede estar en otro)* |
 | `RRSIF028` | Existe registro resumen de eventos |
 
 > Si tu sistema opera en **NO VERI\*FACTU**, esta segunda tabla es la que te concierne. La AEAT es explícita en que esa modalidad es **técnicamente más exigente** que VERI\*FACTU: al no remitir los registros a la sede, la integridad y la trazabilidad hay que demostrarlas con el registro de eventos, su encadenamiento propio y su firma. Mucha implementación la elige creyendo que es la opción de menos trabajo.
@@ -246,6 +257,11 @@ los registros y no puede saber que a un tipo de evento le corresponde un bloque
 concreto. Esa franja —lo estructuralmente correcto y sustantivamente incorrecto— es
 donde trabaja `verifactu-lint`.
 
+Y ni siquiera la forma la cubre entera: el XSD tipa `FechaHoraHusoGenRegistro` como
+`xs:dateTime`, que admite un valor **sin huso horario**, mientras que la orden exige
+que lo lleve (art. 7.g) y fija el formato `YYYY-MM-DDThh:mm:ssTZD`. Un registro así
+valida y no cumple; `RRSIF053` lo dice.
+
 Los XSD oficiales están versionados en [`esquemas/`](esquemas/) y la suite los usa
 para comprobar que los ejemplos son ficheros que un sistema real podría haber
 emitido. Sin ese ancla, las pruebas se construirían con la misma interpretación del
@@ -257,17 +273,20 @@ reglamento que luego verifican.
 - **Orden HAC/1177/2024**, de 17 de octubre — especificaciones técnicas, funcionales y de contenido.
 - **AEAT — *Detalle de las especificaciones técnicas para generación de la huella o hash de los registros de facturación*, v0.1.2** (27/08/2024). Los tres vectores de su apartado 6 están en la suite de tests y se ejecutan en cada cambio: son la definición de correcto para el cálculo de la huella.
 - **AEAT — *Aclaraciones a dudas de los desarrolladores*, v1.3** (04/12/2025).
+- **AEAT — *Diseños de registro de facturación*, v1.0** (`DsRegistroVeriFactu.xlsx`), el formato de cada campo tal como lo publica la AEAT para desarrolladores.
 - **AEAT — *Validaciones y errores*, v1.2.2** (08/04/2026), y su **listado de códigos de error**. Las reglas que citan un código (1118, 1142, 1189, 2006…) comprueban lo mismo que el validador de la AEAT, con sus márgenes y sus excepciones, y el hallazgo dice si ese código es un rechazo o un error admisible —el registro entra, pero hay que subsanarlo— para que se pueda contrastar.
 
 Cuando una regla y la norma discrepen, la norma tiene razón y la regla es un bug. [Abre un issue](https://github.com/easybytehub/verifactu-lint/issues) citando el apartado.
 
 ## Alcance actual
 
-Cubre el encadenamiento, el formato de la huella y la identificación del SIF sobre registros de **alta** y **anulación**, y el encadenamiento, la firma y la coherencia de los registros de **evento**.
+Cubre el encadenamiento, el formato de la huella, la identificación del SIF, la estructura del registro y el formato de sus fechas sobre registros de **alta** y **anulación**, y el encadenamiento, la firma y la coherencia de los registros de **evento**.
 
 Cada fichero se audita detectando qué contiene. Las dos cadenas —facturación y eventos— se auditan por separado porque son independientes: un evento no encadena con una factura ni al revés. Y la de facturación es una por obligado tributario: un SIF multi-OT que exporta varios obligados en el mismo fichero tiene varias cadenas, y cada una se comprueba por su lado.
 
-Todavía **no** cubre los requisitos de conservación de la modalidad NO VERI\*FACTU que no se pueden observar desde un fichero de registros. Están en los [issues](https://github.com/easybytehub/verifactu-lint/issues).
+Todavía **no** cubre los requisitos de conservación de la modalidad NO VERI\*FACTU que no se pueden observar desde un fichero de registros, ni el huso horario de las fechas de los registros de **evento** (`RRSIF053` mira sólo `FechaHoraHusoGenRegistro`). Lo pendiente se sigue en los [issues](https://github.com/easybytehub/verifactu-lint/issues).
+
+Qué cambia en cada versión, y con qué fuente, está en el [CHANGELOG](CHANGELOG.md).
 
 ## Contribuir
 
