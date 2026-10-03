@@ -255,6 +255,41 @@ class TestCicloYResumen:
         informe = audita_eventos(lee_eventos(ruta))
         assert "RRSIF027" in reglas_de(informe)
 
+    def test_fin_sin_inicio_con_el_origen_en_el_fichero_es_aviso(self, tmp_path: Path) -> None:
+        """La cadena empieza aquí y no hay ningún 01 antes del fin: falta de verdad."""
+        ruta = escribe(tmp_path, envuelve(*cadena(["02"])))
+        informe = audita_eventos(lee_eventos(ruta))
+        ciclo = [x for x in informe.hallazgos if x.regla == "RRSIF027"]
+        assert [x.severidad for x in ciclo] == [Severidad.AVISO]
+
+    def test_fin_sin_el_origen_en_el_fichero_es_incompleto(self, tmp_path: Path) -> None:
+        """Incidencia I-5 del estudio S1: un fichero de un solo evento, el fin, que
+        encadena con un 01 anterior. El inicio está en otro fichero, y afirmar que
+        falta sería un falso positivo."""
+        hora = "2024-01-01T19:21:30+01:00"
+        h = calcula("02", "E" * 64, hora)
+        ruta = escribe(tmp_path, envuelve(evento_xml("02", h, anterior="E" * 64, hora=hora)))
+        informe = audita_eventos(lee_eventos(ruta))
+        ciclo = [x for x in informe.hallazgos if x.regla == "RRSIF027"]
+        assert [x.severidad for x in ciclo] == [Severidad.INCOMPLETO]
+        assert not informe.avisos
+
+    def test_un_segundo_fin_sin_inicio_es_aviso_aunque_falte_el_origen(
+        self, tmp_path: Path
+    ) -> None:
+        """Con un 01 y un 02 ya en el fichero, el 01 del siguiente periodo iría entre
+        ellos y el segundo fin: si no está, falta aquí, no en otro fichero."""
+        previa = "E" * 64
+        eventos = []
+        for i, tipo in enumerate(["01", "02", "02"]):
+            hora = f"2024-01-01T19:{20 + i:02d}:30+01:00"
+            h = calcula(tipo, previa, hora)
+            eventos.append(evento_xml(tipo, h, anterior=previa, hora=hora))
+            previa = h
+        informe = audita_eventos(lee_eventos(escribe(tmp_path, envuelve(*eventos))))
+        ciclo = [x for x in informe.hallazgos if x.regla == "RRSIF027"]
+        assert [x.severidad for x in ciclo] == [Severidad.AVISO]
+
     def test_dos_inicios_seguidos(self, tmp_path: Path) -> None:
         ruta = escribe(tmp_path, envuelve(*cadena(["01", "01"])))
         informe = audita_eventos(lee_eventos(ruta))

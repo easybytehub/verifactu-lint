@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 from itertools import pairwise
+from typing import NamedTuple
 
 from verifactu_lint.hallazgos import Hallazgo, Severidad
 from verifactu_lint.huella import (
@@ -47,53 +48,93 @@ def _por_obligado(registros: list[Registro]) -> list[list[Registro]]:
     return list(grupos.values())
 
 
-def _huellas_admisibles(registro: Registro) -> list[str]:
-    """Todas las huellas que serían correctas para este registro.
+def _literal_primero(valor: str | None) -> list[str]:
+    """Las formas admisibles de un importe, empezando por la que está escrita.
+
+    `variantes_numericas` no garantiza ese orden —para `21.40` da primero `21.4`—, y la
+    forma escrita es la que usa quien recalcula la huella por su cuenta para comparar.
+    """
+    escrita = (valor or "").strip()
+    formas = variantes_numericas(escrita)
+    return [escrita, *(f for f in formas if f != escrita)] if escrita in formas else formas
+
+
+class _Calculo(NamedTuple):
+    cuota: str
+    importe: str
+    cadena: str
+    huella: str
+
+
+def _calculos_admisibles(registro: Registro) -> list[_Calculo]:
+    """Cada huella que sería correcta para este registro, con la cadena que la produce.
 
     Hay más de una porque la orden admite `123.1` y `123.10` como el mismo importe,
     y cada forma produce un SHA-256 distinto. Calcular sólo una y compararla sería
     declarar incorrecto lo que la AEAT acepta.
 
+    **La primera es siempre la de los importes tal como están escritos**, que es la que
+    se muestra como «Calculada». Hasta 0.4.0 se mostraba la primera variante, que para
+    `21.40` era `21.4`: quien comparaba con su propio cálculo sobre el valor literal
+    veía un tercer hash y no sabía de dónde salía (estudio S1, I-6).
+
     El producto cartesiano está acotado a mano: dos campos numéricos con dos formas
     cada uno son cuatro combinaciones como mucho.
     """
     if registro.tipo == "anulacion":
-        return [
-            huella(
-                cadena_canonica(
-                    CAMPOS_ANULACION,
-                    [
-                        registro.id_emisor,
-                        registro.num_serie,
-                        registro.fecha_expedicion,
-                        registro.anterior_huella,
-                        registro.fecha_hora_huso,
-                    ],
-                )
-            )
-        ]
+        cadena = cadena_canonica(
+            CAMPOS_ANULACION,
+            [
+                registro.id_emisor,
+                registro.num_serie,
+                registro.fecha_expedicion,
+                registro.anterior_huella,
+                registro.fecha_hora_huso,
+            ],
+        )
+        return [_Calculo("", "", cadena, huella(cadena))]
 
-    admisibles: list[str] = []
-    for cuota in variantes_numericas(registro.cuota_total or ""):
-        for importe in variantes_numericas(registro.importe_total or ""):
-            admisibles.append(
-                huella(
-                    cadena_canonica(
-                        CAMPOS_ALTA,
-                        [
-                            registro.id_emisor,
-                            registro.num_serie,
-                            registro.fecha_expedicion,
-                            registro.tipo_factura,
-                            cuota,
-                            importe,
-                            registro.anterior_huella,
-                            registro.fecha_hora_huso,
-                        ],
-                    )
-                )
+    calculos: list[_Calculo] = []
+    for cuota in _literal_primero(registro.cuota_total):
+        for importe in _literal_primero(registro.importe_total):
+            cadena = cadena_canonica(
+                CAMPOS_ALTA,
+                [
+                    registro.id_emisor,
+                    registro.num_serie,
+                    registro.fecha_expedicion,
+                    registro.tipo_factura,
+                    cuota,
+                    importe,
+                    registro.anterior_huella,
+                    registro.fecha_hora_huso,
+                ],
             )
-    return admisibles
+            calculos.append(_Calculo(cuota, importe, cadena, huella(cadena)))
+    return calculos
+
+
+def _importes(calculo: _Calculo) -> str:
+    return f"CuotaTotal={calculo.cuota}, ImporteTotal={calculo.importe}"
+
+
+def _explica_calculo(calculos: list[_Calculo], es_alta: bool) -> str:
+    """El bloque «Calculada» de RRSIF001: qué se calculó y sobre qué cadena."""
+    literal = calculos[0]
+    if not es_alta:
+        return f"Calculada: {literal.huella}\nSobre la cadena: {literal.cadena}"
+    lineas = [
+        f"Calculada: {literal.huella} (importes tal como están escritos: "
+        f"{_importes(literal)})",
+        f"Sobre la cadena: {literal.cadena}",
+    ]
+    if len(calculos) > 1:
+        lineas.append(
+            "Formas equivalentes de los importes, que la orden admite y producen otra "
+            "huella (tampoco coinciden):"
+        )
+        lineas.extend(f"  {_importes(c)}: {c.huella}" for c in calculos[1:])
+    return "\n".join(lineas)
 
 
 def huella_correcta(registros: list[Registro]) -> list[Hallazgo]:
@@ -118,8 +159,8 @@ def huella_correcta(registros: list[Registro]) -> list[Hallazgo]:
             )
             continue
 
-        admisibles = _huellas_admisibles(r)
-        if declarada in admisibles:
+        calculos = _calculos_admisibles(r)
+        if declarada in {c.huella for c in calculos}:
             continue
 
         hallazgos.append(
@@ -129,7 +170,7 @@ def huella_correcta(registros: list[Registro]) -> list[Hallazgo]:
                 titulo="La huella declarada no coincide con la calculada",
                 detalle=(
                     f"Declarada: {declarada}\n"
-                    f"Calculada: {admisibles[0]}\n"
+                    f"{_explica_calculo(calculos, r.tipo == 'alta')}\n"
                     "En una remisión VERI*FACTU la AEAT marcaría este registro como "
                     '"Aceptado con errores". Las causas habituales son el separador "&" '
                     "final sobrante, el orden de los campos, o no recortar los espacios "
