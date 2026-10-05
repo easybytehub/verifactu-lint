@@ -8,12 +8,8 @@ Las versiones anteriores a 0.4.1 se describen en sus
 
 ## [0.4.1] — 2026-10-03
 
-Correcciones a partir del estudio **S1** de EasyxLab, que pasó la herramienta por 195
-ficheros de registros publicados en repositorios abiertos. No encontró ningún `ERROR`
-falso (0 de 22); sí seis problemas de diagnóstico, severidad y cobertura (I-1 a I-6),
-que son los que se corrigen aquí. Sobre ese mismo corpus, 0.4.1 cambia el resultado de
-9 ficheros: añade los hallazgos nuevos que se describen abajo y pasa uno de `aviso` a
-`incompleto` (I-5). No quita ningún hallazgo.
+Correcciones a partir del estudio S1 de EasyxLab (retirado el 5-oct-2026): seis problemas
+de diagnóstico, severidad y cobertura (I-1 a I-6), que son los que se corrigen aquí.
 
 ### Reglas nuevas
 
