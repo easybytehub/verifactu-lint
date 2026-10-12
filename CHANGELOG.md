@@ -6,6 +6,26 @@ regla y la norma discrepan, la norma tiene razón y la regla es un bug.
 Las versiones anteriores a 0.4.1 se describen en sus
 [releases](https://github.com/easybytehub/verifactu-lint/releases).
 
+## [0.4.2] — 2026-10-12
+
+Sin cambios en las reglas ni en la salida. Sólo documentación: el README daba la
+obligación de los usuarios como «llega en 2027». El 5 de octubre de 2026 el Ministerio
+de Hacienda anunció, en una nota informativa, el aplazamiento de las obligaciones
+pendientes del RD 1007/2023 «hasta octubre de 2028», sin día y sin norma publicada.
+El README dice ahora las dos cosas: los plazos legales siguen siendo los de la
+disposición final cuarta del RD 1007/2023 en la redacción del RD-ley 15/2025 (1 de
+enero de 2027 para los obligados del art. 3.1.a, 1 de julio de 2027 para el resto)
+mientras no se publique la norma en el BOE. Se publica como versión para que la ficha
+de PyPI, que muestra el README, deje de dar la fecha vieja como única; la action pasa a
+instalar 0.4.2 por defecto, con el mismo comportamiento que 0.4.1.
+
+- Ministerio de Hacienda, nota informativa del 5-oct-2026: «proceder al aplazamiento
+  de las obligaciones pendientes de aplicación del Real Decreto 1007/2023, de 5 de
+  diciembre, hasta octubre de 2028».
+- BOE, RD 1007/2023 consolidado (última actualización publicada el 03/12/2025),
+  disposición final cuarta: «antes del 1 de enero de 2027» y «antes del 1 de julio de
+  2027».
+
 ## [0.4.1] — 2026-10-03
 
 Correcciones a partir del estudio S1 de EasyxLab (retirado el 5-oct-2026): seis problemas

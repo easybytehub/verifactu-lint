@@ -30,7 +30,9 @@ ERROR      RRSIF003 [#412 FA/2026/0412]: La cadena se rompe en este registro
 
 **Para quien desarrolla o mantiene un sistema informático de facturación.** Ése tiene los XML por construcción: son los que su código genera antes de remitirlos o conservarlos, y puede pasarlos por aquí en cada cambio.
 
-Es el caso que la herramienta cubre bien, y encaja con el calendario: la obligación de los usuarios llega en 2027, pero **la de los productores y comercializadores venció el 29 de julio de 2025**. Quien está peleándose con esto hoy es quien fabrica el software.
+Es el caso que la herramienta cubre bien, y encaja con el calendario: la obligación de los usuarios todavía no ha llegado, pero **la de los productores y comercializadores venció el 29 de julio de 2025**. Quien está peleándose con esto hoy es quien fabrica el software.
+
+Para los usuarios, el 5 de octubre de 2026 Hacienda anunció que aplazará Verifactu hasta octubre de 2028. Mientras no se publique la norma en el BOE, los plazos legales siguen siendo el 1 de enero de 2027 para sociedades y el 1 de julio de 2027 para el resto ([nota informativa](https://www.hacienda.gob.es/sgt/gabsehacienda/nota-informativa-verifactu.pdf); [RD 1007/2023 consolidado](https://www.boe.es/buscar/act.php?id=BOE-A-2023-24840), disp. final cuarta). La nota anuncia también una revisión posterior del ámbito y de algunos aspectos técnicos; mientras no se publique, las reglas siguen contrastadas con la Orden HAC/1177/2024 vigente.
 
 ### Dónde existe el XML, y dónde no
 
@@ -91,7 +93,7 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
-      - uses: easybytehub/verifactu-lint@v0.4.1
+      - uses: easybytehub/verifactu-lint@v0.4.2
         with:
           ficheros: "registros/*.xml"
           fallar: "false"      # que no aborte antes de subir el informe
