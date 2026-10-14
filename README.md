@@ -307,7 +307,7 @@ python -m venv .venv && .venv/bin/pip install -e ".[dev]"
 
 ## Procedencia
 
-Cada release publica su procedencia mediante [attestations de GitHub](https://docs.github.com/actions/security-guides/using-artifact-attestations), firmadas con OIDC efímero. No hay ninguna clave privada custodiada por nadie.
+Cada release publica su procedencia mediante [attestations de GitHub](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations), firmadas con OIDC efímero. No hay ninguna clave privada custodiada por nadie.
 
 ```bash
 gh attestation verify --owner easybytehub verifactu_lint-*.whl
