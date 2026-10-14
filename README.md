@@ -4,7 +4,7 @@
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/easybytehub/verifactu-lint/badge)](https://scorecard.dev/viewer/?uri=github.com/easybytehub/verifactu-lint)
 [![PyPI](https://img.shields.io/pypi/v/verifactu-lint)](https://pypi.org/project/verifactu-lint/)
 [![Python](https://img.shields.io/pypi/pyversions/verifactu-lint)](https://pypi.org/project/verifactu-lint/)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/easybytehub/verifactu-lint/blob/main/LICENSE)
 
 **Comprueba en tu CI que los registros de facturación que genera tu SIF cumplen el RRSIF** (RD 1007/2023 y Orden HAC/1177/2024), antes de que lleguen a un cliente o a la AEAT.
 
@@ -264,7 +264,7 @@ Y ni siquiera la forma la cubre entera: el XSD tipa `FechaHoraHusoGenRegistro` c
 que lo lleve (art. 7.g) y fija el formato `YYYY-MM-DDThh:mm:ssTZD`. Un registro así
 valida y no cumple; `RRSIF053` lo dice.
 
-Los XSD oficiales están versionados en [`esquemas/`](esquemas/) y la suite los usa
+Los XSD oficiales están versionados en [`esquemas/`](https://github.com/easybytehub/verifactu-lint/tree/main/esquemas) y la suite los usa
 para comprobar que los ejemplos son ficheros que un sistema real podría haber
 emitido. Sin ese ancla, las pruebas se construirían con la misma interpretación del
 reglamento que luego verifican.
@@ -288,7 +288,7 @@ Cada fichero se audita detectando qué contiene. Las dos cadenas —facturación
 
 Todavía **no** cubre los requisitos de conservación de la modalidad NO VERI\*FACTU que no se pueden observar desde un fichero de registros, ni el huso horario de las fechas de los registros de **evento** (`RRSIF053` mira sólo `FechaHoraHusoGenRegistro`). Lo pendiente se sigue en los [issues](https://github.com/easybytehub/verifactu-lint/issues).
 
-Qué cambia en cada versión, y con qué fuente, está en el [CHANGELOG](CHANGELOG.md).
+Qué cambia en cada versión, y con qué fuente, está en el [CHANGELOG](https://github.com/easybytehub/verifactu-lint/blob/main/CHANGELOG.md).
 
 ## Contribuir
 
@@ -317,7 +317,7 @@ La atestación dice qué commit, qué workflow y qué runner produjeron ese arte
 
 ## Licencia
 
-[Apache-2.0](LICENSE).
+[Apache-2.0](https://github.com/easybytehub/verifactu-lint/blob/main/LICENSE).
 
 
 ## Quién lo mantiene
