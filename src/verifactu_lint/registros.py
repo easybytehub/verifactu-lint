@@ -280,7 +280,7 @@ _HIJOS_DEL_REGISTRO: dict[str, frozenset[str]] = {
 }
 
 # `IDFactura` cambia de nombres según el tipo de registro: en la anulación cada campo
-# lleva el sufijo «Anulada». Confundirlos es un error real (estudio S1, I-3).
+# lleva el sufijo «Anulada». Confundirlos es un error real.
 ID_FACTURA: dict[str, tuple[str, str, str]] = {
     "RegistroAlta": ("IDEmisorFactura", "NumSerieFactura", "FechaExpedicionFactura"),
     "RegistroAnulacion": (

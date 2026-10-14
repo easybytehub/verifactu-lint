@@ -6,6 +6,11 @@ regla y la norma discrepan, la norma tiene razón y la regla es un bug.
 Las versiones anteriores a 0.4.1 se describen en sus
 [releases](https://github.com/easybytehub/verifactu-lint/releases).
 
+## [Sin publicar]
+
+Sin cambios en las reglas ni en la salida. Los comentarios del código y los tests ya no
+citan el estudio S1 de EasyxLab, retirado el 5-oct-2026: describen el caso técnico.
+
 ## [0.4.2] — 2026-10-12
 
 Sin cambios en las reglas ni en la salida. Sólo documentación: el README daba la

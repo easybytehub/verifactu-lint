@@ -1,10 +1,9 @@
 """Estructura del registro y formato de sus fechas (RRSIF050-053), y lo que arrastran.
 
-Los casos reproducen, con registros sintéticos mínimos, la forma de los que encontró
-el estudio S1 de EasyxLab (incidencias I-1 a I-4): un generador con su propia
-estructura (`<Factura><TipoFactura>`, `<Huella><Hash>`, `<Desglose><DetalleIVA>`,
-fechas ISO), una anulación escrita con los nombres del alta y una
-`FechaHoraHusoGenRegistro` con microsegundos y sin huso. No se copia ningún fichero
+Los casos reproducen, con registros sintéticos mínimos, la forma de defectos reales:
+un generador con su propia estructura (`<Factura><TipoFactura>`, `<Huella><Hash>`,
+`<Desglose><DetalleIVA>`, fechas ISO), una anulación escrita con los nombres del alta
+y una `FechaHoraHusoGenRegistro` con microsegundos y sin huso. No se copia ningún fichero
 de terceros: sólo la forma del defecto.
 
 Las huellas se calculan con el propio módulo, igual que en `test_reglas.py`.
@@ -30,7 +29,7 @@ def de(informe: Informe, regla: str) -> list[Hallazgo]:
 
 
 def alta_con_estructura_propia(num_serie: str, fecha: str = "2026-05-01") -> str:
-    """La forma del caso S1/I-2: los datos están, pero en rutas inventadas."""
+    """Un generador con su propia estructura: los datos están, pero en rutas inventadas."""
     return f"""
     <RegistroAlta>
       <IDVersion>1.0</IDVersion>
@@ -88,7 +87,7 @@ def anulacion_xml(
 
 
 class TestEstructuraDelEsquema:
-    """RRSIF050 — incidencia I-2 del estudio S1."""
+    """RRSIF050 — los elementos del registro están donde el esquema los prevé."""
 
     def test_nombra_cada_ruta_inesperada_en_un_solo_hallazgo(self, tmp_path: Path) -> None:
         ruta = escribe(tmp_path, envuelve(alta_con_estructura_propia("NOVA-1")))
@@ -141,7 +140,7 @@ class TestEstructuraDelEsquema:
 
 
 class TestIdentificacionDeLaAnulacion:
-    """RRSIF051 — incidencia I-3 del estudio S1."""
+    """RRSIF051 — la anulación identifica la factura con sus tres campos."""
 
     def test_nombres_del_alta_en_una_anulacion(self, tmp_path: Path) -> None:
         ruta = escribe(
@@ -178,7 +177,7 @@ class TestIdentificacionDeLaAnulacion:
 
 
 class TestFormatoDeFecha:
-    """RRSIF052 — incidencia I-4 del estudio S1."""
+    """RRSIF052 — las fechas de expedición van en `dd-mm-aaaa`."""
 
     def test_fecha_iso(self, tmp_path: Path) -> None:
         h = huella_alta(NIF, "FA/1", "2026-05-01", "F1", "12.35", "123.45", None, HORA)
@@ -203,7 +202,7 @@ class TestFormatoDeFecha:
 
 
 class TestHusoHorario:
-    """RRSIF053 — incidencia I-1 del estudio S1."""
+    """RRSIF053 — `FechaHoraHusoGenRegistro` lleva huso horario."""
 
     def _informe(self, tmp_path: Path, *horas: str) -> Informe:
         registros = []
@@ -247,7 +246,7 @@ class TestHusoHorario:
 
 
 class TestCalculadaMuestraLaFormaEscrita:
-    """RRSIF001 — incidencia I-6 del estudio S1."""
+    """RRSIF001 — la «Calculada» es la de los importes tal como están escritos."""
 
     def test_calculada_con_los_importes_tal_como_estan_escritos(self, tmp_path: Path) -> None:
         xml = alta_xml("FA/1", "0" * 64, cuota="21.40", importe="121.40", base="100.00",
