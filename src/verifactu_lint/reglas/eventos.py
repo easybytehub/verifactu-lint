@@ -371,8 +371,8 @@ def ciclo_no_verifactu(eventos: list[Evento]) -> list[Hallazgo]:
     `PrimerEvento=S`) o porque antes del fin ya hubo otro 01 o 02, y entonces el 01 que
     abre este periodo iría entre ellos. Si no, el inicio puede estar en un fichero
     anterior y aquí no se puede determinar: es `INCOMPLETO`, como RRSIF028 en el mismo
-    caso. Hasta 0.4.0 era siempre `AVISO`, y el estudio S1 lo encontró en un fichero de
-    un solo evento cuyo `EventoAnterior` era, precisamente, un `01` (incidencia I-5).
+    caso. Hasta 0.4.0 era siempre `AVISO`, también en un fichero de un solo evento cuyo
+    `EventoAnterior` era, precisamente, un `01`.
     """
     hallazgos: list[Hallazgo] = []
     abierto = False

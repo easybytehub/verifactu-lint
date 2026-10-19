@@ -263,7 +263,7 @@ class TestCicloYResumen:
         assert [x.severidad for x in ciclo] == [Severidad.AVISO]
 
     def test_fin_sin_el_origen_en_el_fichero_es_incompleto(self, tmp_path: Path) -> None:
-        """Incidencia I-5 del estudio S1: un fichero de un solo evento, el fin, que
+        """Un fichero de un solo evento, el fin, que
         encadena con un 01 anterior. El inicio está en otro fichero, y afirmar que
         falta sería un falso positivo."""
         hora = "2024-01-01T19:21:30+01:00"

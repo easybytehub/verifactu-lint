@@ -76,7 +76,7 @@ def _calculos_admisibles(registro: Registro) -> list[_Calculo]:
     **La primera es siempre la de los importes tal como están escritos**, que es la que
     se muestra como «Calculada». Hasta 0.4.0 se mostraba la primera variante, que para
     `21.40` era `21.4`: quien comparaba con su propio cálculo sobre el valor literal
-    veía un tercer hash y no sabía de dónde salía (estudio S1, I-6).
+    veía un tercer hash y no sabía de dónde salía.
 
     El producto cartesiano está acotado a mano: dos campos numéricos con dos formas
     cada uno son cuatro combinaciones como mucho.

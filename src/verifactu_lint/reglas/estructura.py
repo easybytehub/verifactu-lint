@@ -5,10 +5,10 @@ leen cada dato en la ruta que fija el esquema, y un dato escrito en otra ruta cu
 como ausente. Un registro con su propia estructura —`<Factura><TipoFactura>` en vez
 de `TipoFactura` colgando de `RegistroAlta`— recibía hasta 0.4.0 una cascada de
 hallazgos ciertos y engañosos: «no informa TipoFactura», «no tiene desglose», «no
-informa Huella». Quien los lee busca datos que faltan, y los datos están (estudio S1,
-incidencias I-2 e I-3). Aquí se nombra la causa una vez, antes que las consecuencias.
+informa Huella». Quien los lee busca datos que faltan, y los datos están. Aquí se nombra
+la causa una vez, antes que las consecuencias.
 
-Las dos reglas de formato (I-1 e I-4) son el otro hueco que dejaba la tesis
+Las dos reglas de formato son el otro hueco que dejaba la tesis
 «complementaria al XSD»: la fecha `dd-mm-aaaa` sí la caza el esquema, pero quien no
 valida contra él no se enteraba; y el huso horario de `FechaHoraHusoGenRegistro` no
 lo caza ni el esquema, que tipa el campo como `xs:dateTime` y lo admite sin huso,
@@ -168,8 +168,8 @@ def identificacion_de_la_anulacion(registros: list[Registro]) -> list[Hallazgo]:
     """RRSIF051 — la anulación identifica la factura con sus tres campos obligatorios.
 
     Es el equivalente, para la anulación, de lo que RRSIF030 comprueba en el alta: un
-    campo obligatorio que falta. Y tiene una causa típica que merece nombre propio
-    (estudio S1, I-3): escribir `IDEmisorFactura`, `NumSerieFactura` y
+    campo obligatorio que falta. Y tiene una causa típica que merece nombre propio:
+    escribir `IDEmisorFactura`, `NumSerieFactura` y
     `FechaExpedicionFactura`, que son los nombres del **alta**. En la anulación llevan
     el sufijo «Anulada», así que el parser los lee vacíos, la referencia sale «(sin
     NumSerieFactura)» y lo único que se veía era RRSIF001: la huella no cuadra. Cierto,
@@ -277,7 +277,7 @@ def formato_de_fecha(registros: list[Registro]) -> list[Hallazgo]:
     a la del registro anterior) el formato «Fecha (dd-mm-yyyy)», y el esquema la tipa
     con el patrón `\\d{2,2}-\\d{2,2}-\\d{4,4}`. El XSD ya lo caza; la regla existe para
     quien no valida contra él, y porque la fecha entra en la huella tal como está
-    escrita (estudio S1, I-4).
+    escrita.
 
     Un campo vacío no es asunto de esta regla: de eso se ocupan RRSIF051 y el XSD.
     """
